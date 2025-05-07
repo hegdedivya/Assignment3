@@ -9,11 +9,13 @@ import SwiftUI
 
 @main
 struct Assignment3App: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     let persistenceController = PersistenceController.shared
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            LoginView()
+            //ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }
     }

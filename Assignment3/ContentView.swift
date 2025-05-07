@@ -7,14 +7,15 @@
 
 import SwiftUI
 
-
-import SwiftUI
-
 struct ContentView: View {
     var body: some View {
         VStack {
-            Text("Project BillSplit Assignment")
+            Image(systemName: "globe")
+                .imageScale(.large)
+                .foregroundStyle(.tint)
+            Text("Hello, world!")
         }
+        .padding()
     }
 }
 
