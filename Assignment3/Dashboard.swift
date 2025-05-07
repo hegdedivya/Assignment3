@@ -12,7 +12,8 @@ struct DashboardView: View {
         TabView {
             ActivitiesView()
                 .tabItem {
-                    Label("Activities", systemImage: "list.bullet.rectangle")
+                    Label("Activities 123", systemImage: "list.bullet.rectangle")
+                
                 }
 
             GroupView()
