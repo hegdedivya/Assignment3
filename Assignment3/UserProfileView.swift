@@ -16,7 +16,7 @@ struct UserProfileView: View {
             VStack() {
                 Text("Profile")
                     .font(.title)
-                    .fontWeight(.bold)
+                    .fontWeight(.black)
                     .padding()
                 Image(systemName: "person.crop.circle.fill")
                     .resizable()
