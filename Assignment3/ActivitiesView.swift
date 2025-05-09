@@ -15,7 +15,7 @@ struct Expense: Identifiable, Codable {
 }
 
 struct Activity: Identifiable, Codable {
-    var id = UUID()
+    var id: String
     var name: String
     var date: Date
     var members: [String]
@@ -59,13 +59,51 @@ struct ActivitiesView: View {
                 return
             }
 
-            if let documents = snapshot?.documents {
-                activities = documents.compactMap { doc in
-                    try? doc.data(as: Activity.self)
+            guard let documents = snapshot?.documents else {
+                print("⚠️ No documents found")
+                return
+            }
+
+            var fetchedActivities: [Activity] = []
+
+            for doc in documents {
+                let data = doc.data()
+                let id = doc.documentID
+
+                guard let name = data["name"] as? String,
+                      let timestamp = data["date"] as? Timestamp,
+                      let members = data["members"] as? [String],
+                      let expenseArray = data["expenses"] as? [[String: Any]] else {
+                    print("❌ Skipping invalid document: \(doc.documentID)")
+                    continue
                 }
-                isLoading = false
+
+                let date = timestamp.dateValue()
+
+                // Parse expenses
+                let expenses: [Expense] = expenseArray.compactMap { dict in
+                    guard let itemName = dict["itemName"] as? String,
+                          let amount = dict["amount"] as? Double else {
+                        return nil
+                    }
+                    return Expense(itemName: itemName, amount: amount)
+                }
+
+                let activity = Activity(id: id, name: name, date: date, members: members, expenses: expenses)
+                fetchedActivities.append(activity)
+            }
+
+            DispatchQueue.main.async {
+                self.activities = fetchedActivities
+                self.isLoading = false
             }
         }
     }
+
 }
 
+#Preview {
+    NavigationView{
+        ActivitiesView()
+    }
+}
