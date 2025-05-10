@@ -11,9 +11,10 @@ import FirebaseAuth
 
 struct AddGroupView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var groupName: String = ""
-    private let db = Firestore.firestore()
-    private let currentUserId = Auth.auth().currentUser?.uid ?? "userId1" // Replace with actual user ID
+        @State private var groupName: String = ""
+        @Binding var selectedGroup: Group? // First parameter
+        private let db = Firestore.firestore()
+        private let currentUserId = Auth.auth().currentUser?.uid ?? "userId1"
 
     var onGroupAdded: () -> Void // Callback to refresh the group list
 
@@ -37,7 +38,7 @@ struct AddGroupView: View {
                     .cornerRadius(10)
             }
             .padding()
-            .disabled(groupName.isEmpty) // Disable button if group name is empty
+            .disabled(groupName.isEmpty)
 
             Spacer()
         }
@@ -45,23 +46,38 @@ struct AddGroupView: View {
     }
 
     func addGroup() {
-        let newGroupId = UUID().uuidString // Generate a unique ID for the group
+        let newGroupId = UUID().uuidString
         let groupData: [String: Any] = [
             "name": groupName,
-            "members": [currentUserId], // Add current user as the first member
+            "members": [currentUserId],
             "createdAt": FieldValue.serverTimestamp()
         ]
 
-        // Write group data to Firestore
         db.collection("groups").document(newGroupId).setData(groupData) { error in
             if let error = error {
                 print("Error creating group: \(error)")
                 return
             }
 
-            // Callback to refresh groups and dismiss the modal
-            onGroupAdded()
-            dismiss()
+            db.collection("groups").document(newGroupId).getDocument { snapshot, error in
+                if let error = error {
+                    print("Error fetching new group: \(error)")
+                    return
+                }
+
+                guard let group = try? snapshot?.data(as: Group.self) else { return }
+
+                selectedGroup = group
+                onGroupAdded()
+                dismiss()
+            }
         }
+    }
+}
+
+struct AddGroupView_Previews: PreviewProvider {
+    static var previews: some View {
+        AddGroupView(selectedGroup: .constant(nil), onGroupAdded: {})
+
     }
 }
