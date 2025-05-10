@@ -5,7 +5,7 @@
 //  Created by Divya on 6/5/2025.
 //
 
-
+import Foundation
 import FirebaseFirestore
 
 struct Group: Identifiable, Codable {
