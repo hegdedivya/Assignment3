@@ -6,3 +6,8 @@
 //
 
 import Foundation
+
+struct UserG: Identifiable {
+    let id: String
+    let name: String
+}

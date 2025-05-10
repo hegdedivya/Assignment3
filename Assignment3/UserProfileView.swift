@@ -49,10 +49,10 @@ struct UserProfileView: View {
                     .font(.title3)
                     .fontWeight(.bold)
                     .padding()
-                Divider().padding(.vertical)
+                /*Divider().padding(.vertical)
                 Text("Rate SplitMe")
                     .font(.title3)
-                    .fontWeight(.bold)
+                    .fontWeight(.bold)*/
             }
         }
         
