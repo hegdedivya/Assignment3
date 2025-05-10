@@ -10,16 +10,19 @@ import SwiftUI
 struct DashboardView: View {
     var body: some View {
         TabView {
-                ActivitiesView()
-                    .tabItem {
-                        Label("Activities 123", systemImage: "list.bullet.rectangle")
-                    
-                    }
-
-                GroupView()
-                    .tabItem {
-                        Label("Group", systemImage: "person.3.fill")
-                    }
+            ActivitiesView()
+                .tabItem {
+                    Label("Activities", systemImage: "list.bullet.rectangle")
+                
+                }
+            FriendView()
+                .tabItem {
+                    Label("Friends",systemImage: "person.2.fill")
+                }
+            GroupView()
+                .tabItem {
+                    Label("Group", systemImage: "person.3.fill")
+                }
 
                 UserProfileView()
                     .tabItem {

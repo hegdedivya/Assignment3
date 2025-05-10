@@ -5,11 +5,13 @@
 //  Created by Divya on 6/5/2025.
 //
 
-import Foundation
+
+import FirebaseFirestore
 
 struct Group: Identifiable, Codable {
-    var id: String
-    var name: String
-    var members: [String]
-    var createdAt: Date
+    @DocumentID var id: String? // Firestore will automatically assign this
+    let name: String
+    let members: [String]
+    let createdAt: Date
+
 }
