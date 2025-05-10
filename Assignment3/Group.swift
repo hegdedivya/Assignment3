@@ -6,3 +6,11 @@
 //
 
 import Foundation
+import FirebaseFirestore
+
+struct Group: Identifiable, Codable {
+    @DocumentID var id: String? // Firestore will automatically assign this
+    let name: String
+    let members: [String]
+    let createdAt: Date
+}
