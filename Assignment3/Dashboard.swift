@@ -15,7 +15,10 @@ struct DashboardView: View {
                     Label("Activities 123", systemImage: "list.bullet.rectangle")
                 
                 }
-
+            FriendView()
+                .tabItem {
+                    Label("Friends",systemImage: "person.2.fill")
+                }
             GroupView()
                 .tabItem {
                     Label("Group", systemImage: "person.3.fill")
