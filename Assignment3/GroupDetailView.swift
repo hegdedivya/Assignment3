@@ -1,18 +1,18 @@
 //
-//  GroupDetailsView.swift
+//  GroupDetailView.swift
 //  Assignment3
 //
-//  Created by Divya on 6/5/2025.
+//  Created by Divya on 9/5/2025.
 //
 
 import SwiftUI
 
-struct GroupDetailsView: View {
+struct GroupDetailView: View {
     var body: some View {
         Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
     }
 }
 
 #Preview {
-    GroupDetailsView()
+    GroupDetailView()
 }
