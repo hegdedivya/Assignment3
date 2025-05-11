@@ -12,20 +12,21 @@ struct DashboardView: View {
     var body: some View {
         let userID = dataManager.getCurrentUserID()
         TabView {
-            ActivitiesView()
+            
+            
+            GroupView()
                 .tabItem {
-                    Label("Activities", systemImage: "list.bullet.rectangle")
-                
+                    Label("Group", systemImage: "person.3.fill")
                 }
             FriendView()
                 .tabItem {
                     Label("Friends",systemImage: "person.2.fill")
                 }
-            GroupView()
+            ActivitiesView()
                 .tabItem {
-                    Label("Group", systemImage: "person.3.fill")
+                    Label("Activities", systemImage: "list.bullet.rectangle")
+                
                 }
-
             if let userID = dataManager.getCurrentUserID() {
                             UserProfileView(userId: userID)
                                 .tabItem {

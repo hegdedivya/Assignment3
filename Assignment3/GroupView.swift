@@ -6,65 +6,106 @@
 //
 import SwiftUI
 import FirebaseFirestore
-import FirebaseAuth
 
 struct GroupView: View {
-    @State private var groups: [Group] = [] // List of groups
-    @State private var isAddGroupPresented: Bool = false // Add group modal
-    private let db = Firestore.firestore()
-    private let currentUserId = Auth.auth().currentUser?.uid ?? "userId1" // Replace with actual user ID
-
+    @ObservedObject private var dataManager = FirebaseDataManager.shared
+    @State private var isAddGroupPresented: Bool = false
+    
     var body: some View {
         NavigationView {
             VStack {
-                Text("My Groups")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+                if dataManager.isLoadingGroups {
+                    ProgressView("Loading groups...")
+                } else if dataManager.groups.isEmpty {
+                    // Empty state
+                    VStack(spacing: 16) {
+                        Image(systemName: "person.3")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray)
+                        
+                        Text("No Groups Yet")
+                            .font(.title)
+                        
+                        Text("Create a group to start splitting bills with friends")
+                            .multilineTextAlignment(.center)
+                            .foregroundColor(.gray)
+                    }
                     .padding()
-
-                List(groups) { group in
-                    NavigationLink(destination: GroupDetailView(group: group)) {
-                        Text(group.name)
-                            .font(.headline)
+                } else {
+                    // Group list
+                    List {
+                        ForEach(dataManager.groups, id: \.id) { group in
+                            NavigationLink(destination: GroupDetailView(group: group)) {
+                                HStack {
+                                    // Group icon based on type
+                                    Image(systemName: getGroupIcon(type: group.type ?? "Other"))
+                                        .font(.title2)
+                                        .foregroundColor(.teal)
+                                        .frame(width: 40, height: 40)
+                                        .background(Color.gray.opacity(0.2))
+                                        .cornerRadius(8)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(group.name)
+                                            .font(.headline)
+                                        
+                                        Text("\(group.members.count) members")
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                    }
+                                    .padding(.leading, 8)
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
                     }
                 }
-                .listStyle(PlainListStyle())
-
+                
                 Spacer()
-
+                
                 // Add Group Button
                 Button(action: {
                     isAddGroupPresented = true
                 }) {
-                    Text("Add Group")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                    HStack {
+                        Image(systemName: "plus")
+                            .font(.headline)
+                        Text("Add Group")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
                 }
                 .padding()
                 .sheet(isPresented: $isAddGroupPresented) {
-                    AddGroupWithUsersView(onGroupAdded: fetchGroups)
+                    AddGroupWithUsersView(onGroupAdded: {
+                        // Refresh groups if needed, though Firebase listener should handle this
+                        if let userID = dataManager.getCurrentUserID() {
+                            dataManager.fetchUserGroups(userID: userID)
+                        }
+                    })
                 }
             }
-            .onAppear(perform: fetchGroups)
             .navigationTitle("Groups")
         }
-    }
-
-    func fetchGroups() {
-        db.collection("groups")
-            .whereField("members", arrayContains: currentUserId)
-            .getDocuments { snapshot, error in
-                if let error = error {
-                    print("Error fetching groups: \(error)")
-                    return
-                }
-
-                guard let documents = snapshot?.documents else { return }
-                self.groups = documents.compactMap { try? $0.data(as: Group.self) }
+        .onAppear {
+            if let userID = dataManager.getCurrentUserID() {
+                dataManager.fetchUserGroups(userID: userID)
             }
+        }
+    }
+    
+    // Helper function to get an icon for group type
+    func getGroupIcon(type: String) -> String {
+        switch type.lowercased() {
+        case "trip": return "airplane"
+        case "home": return "house"
+        case "couple": return "heart"
+        default: return "list.bullet"
+        }
     }
 }
 

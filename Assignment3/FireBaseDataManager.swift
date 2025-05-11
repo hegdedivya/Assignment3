@@ -15,7 +15,8 @@ class FirebaseDataManager: ObservableObject {
     
     // User data
     @Published var currentUser: UserProfile?
-    @Published var userGroups: [GroupData] = []
+    @Published var userGroups: [GroupData] = [] // Keep as GroupData for now
+    @Published var groups: [Group] = [] // New property for Group objects
     @Published var userActivities: [ActivityData] = []
     @Published var userTransactions: [TransactionData] = []
     
@@ -51,6 +52,80 @@ class FirebaseDataManager: ObservableObject {
         fetchUserTransactions(userID: user.uid)
     }
     
+    // Get current user ID
+    func getCurrentUserID() -> String? {
+        // First try to get from currentUser
+        if let userID = currentUser?.id, !userID.isEmpty {
+            return userID
+        }
+        
+        // Fallback to Auth if currentUser is not loaded yet
+        return Auth.auth().currentUser?.uid
+    }
+    
+    // Fetch groups for a user
+    func fetchUserGroups(userID: String) {
+        isLoadingGroups = true
+        
+        // Remove existing listener
+        listeners["groups"]?.remove()
+        
+        // Query groups where user is a member
+        let listener = db.collection("Group")
+            .whereField("members", arrayContains: userID)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
+                
+                self.isLoadingGroups = false
+                
+                if let error = error {
+                    self.errorMessage = "Error fetching groups: \(error.localizedDescription)"
+                    return
+                }
+                
+                var groups: [Group] = []
+                
+                for document in snapshot?.documents ?? [] {
+                    let data = document.data()
+                    
+                    let name = data["name"] as? String ?? ""
+                    let members = data["members"] as? [String] ?? []
+                    let timestamp = data["createdAt"] as? Timestamp ?? Timestamp(date: Date())
+                    let type = data["type"] as? String
+                    let createdBy = data["createdBy"] as? String
+                    
+                    let group = Group(
+                        id: document.documentID,
+                        name: name,
+                        members: members,
+                        createdAt: timestamp.dateValue(),
+                        type: type,
+                        createdBy: createdBy
+                    )
+                    
+                    groups.append(group)
+                }
+                
+                DispatchQueue.main.async {
+                    // Update both group properties
+                    self.groups = groups
+                    
+                    // Convert Group objects to GroupData objects
+                    self.userGroups = groups.map { group in
+                        return GroupData(
+                            id: group.id ?? "",
+                            name: group.name,
+                            members: group.members,
+                            transactions: [], // Default empty arrays
+                            expenses: []      // Default empty arrays
+                        )
+                    }
+                }
+            }
+        
+        listeners["groups"] = listener
+    }
+    
     /// Call this function when logging out
     func clearUserData() {
         // Remove all listeners
@@ -63,6 +138,7 @@ class FirebaseDataManager: ObservableObject {
         DispatchQueue.main.async {
             self.currentUser = nil
             self.userGroups = []
+            self.groups = []
             self.userActivities = []
             self.userTransactions = []
             self.errorMessage = nil
@@ -113,63 +189,6 @@ class FirebaseDataManager: ObservableObject {
             }
         
         listeners["user"] = listener
-    }
-    // Add this function to your FirebaseDataManager class
-    func getCurrentUserID() -> String? {
-        // First try to get from currentUser
-        if let userID = currentUser?.id, !userID.isEmpty {
-            return userID
-        }
-        
-        // Fallback to Auth if currentUser is not loaded yet
-        return Auth.auth().currentUser?.uid
-    }
-    
-    
-    /// Fetch groups that the user belongs to
-    private func fetchUserGroups(userID: String) {
-        isLoadingGroups = true
-        
-        // Query groups where user is a member
-        let query = db.collection("Group")
-            .whereField("Members", arrayContains: userID)
-        
-        // Remove existing listener
-        listeners["groups"]?.remove()
-        
-        // Set up new listener
-        let listener = query.addSnapshotListener { [weak self] snapshot, error in
-            guard let self = self else { return }
-            
-            self.isLoadingGroups = false
-            
-            if let error = error {
-                self.errorMessage = "Error fetching groups: \(error.localizedDescription)"
-                return
-            }
-            
-            var groups: [GroupData] = []
-            
-            for document in snapshot?.documents ?? [] {
-                let data = document.data()
-                
-                let group = GroupData(
-                    id: document.documentID,
-                    name: data["Name"] as? String ?? "",
-                    members: data["Members"] as? [String] ?? [],
-                    transactions: data["Transactions"] as? [String] ?? [],
-                    expenses: data["Expenses"] as? [Double] ?? []
-                )
-                
-                groups.append(group)
-            }
-            
-            DispatchQueue.main.async {
-                self.userGroups = groups
-            }
-        }
-        
-        listeners["groups"] = listener
     }
     
     /// Fetch activities involving the user
@@ -302,11 +321,63 @@ class FirebaseDataManager: ObservableObject {
             self.isLoadingTransactions = false
         }
     }
+    
+    // MARK: - Create and Update Methods
+    
+    /// Create a new group
+    func createGroup(name: String, type: String, members: [String], completion: @escaping (Bool, String?) -> Void) {
+        guard let currentUserID = getCurrentUserID() else {
+            completion(false, "You must be logged in to create a group")
+            return
+        }
+        
+        // Include the current user in the members list if not already included
+        var allMembers = members
+        if !allMembers.contains(currentUserID) {
+            allMembers.append(currentUserID)
+        }
+        
+        // Create group data
+        let groupData: [String: Any] = [
+            "name": name,
+            "type": type,
+            "members": allMembers,
+            "createdBy": currentUserID,
+            "createdAt": FieldValue.serverTimestamp()
+        ]
+        
+        // Add to Firestore
+        db.collection("Group").document().setData(groupData) { error in
+            if let error = error {
+                completion(false, "Error creating group: \(error.localizedDescription)")
+                return
+            }
+            
+            // Refresh groups
+            self.fetchUserGroups(userID: currentUserID)
+            completion(true, nil)
+        }
+    }
+    
+    /// Add a user to an existing group
+    func addUserToGroup(groupID: String, userID: String, completion: @escaping (Bool, String?) -> Void) {
+        db.collection("Group").document(groupID).updateData([
+            "members": FieldValue.arrayUnion([userID])
+        ]) { error in
+            if let error = error {
+                completion(false, "Error adding user to group: \(error.localizedDescription)")
+                return
+            }
+            
+            // Group data will be refreshed automatically via listener
+            completion(true, nil)
+        }
+    }
 }
 
 // MARK: - Data Models
 
-struct UserProfile {
+struct UserProfile: Identifiable {
     let id: String
     let email: String
     let firstName: String

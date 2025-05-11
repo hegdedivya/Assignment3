@@ -11,55 +11,120 @@ import FirebaseFirestore
 struct AddUserToGroupView: View {
     @Environment(\.dismiss) var dismiss
     @State private var searchQuery: String = ""
-    @State private var searchResults: [User] = [] // Search results
-    @State private var selectedUser: User? // Selected user to add
-
+    @State private var searchResults: [UserSearchResult] = []
+    @State private var selectedUser: UserSearchResult?
+    @State private var isSearching = false
+    @State private var errorMessage: String?
+    @State private var searchType: SearchType = .email
+    
     let group: Group
-    private let db = Firestore.firestore()
-
+    @ObservedObject private var dataManager = FirebaseDataManager.shared
+    
+    var onUserAdded: () -> Void = {}
+    
+    enum SearchType {
+        case email, phone
+    }
+    
+    struct UserSearchResult: Identifiable {
+        let id: String
+        let name: String
+        let email: String
+        let phoneNumber: String?
+    }
+    
     var body: some View {
         VStack {
-            Text("Add User to \(group.name)")
-                .font(.title)
-                .padding()
-
-            TextField("Search by email or name", text: $searchQuery, onCommit: searchUsers)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding()
-
-            if searchResults.isEmpty && !searchQuery.isEmpty {
-                Text("No user found. Would you like to invite them?")
-                    .font(.headline)
-                    .foregroundColor(.gray)
-                    .padding()
-
-                Button(action: inviteUser) {
-                    Text("Invite \(searchQuery)")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.orange)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+            // Header
+            HStack {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .foregroundColor(.primary)
                 }
-                .padding()
+                
+                Spacer()
+                
+                Text("Add User to \(group.name)")
+                    .font(.headline)
+                
+                Spacer()
             }
-
+            .padding()
+            
+            // Search type selector
+            Picker("Search Type", selection: $searchType) {
+                Text("Email").tag(SearchType.email)
+                Text("Phone").tag(SearchType.phone)
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .padding(.horizontal)
+            
+            // Search field
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.gray)
+                
+                TextField(searchType == .email ? "Search by email" : "Search by phone", text: $searchQuery)
+                    .keyboardType(searchType == .phone ? .phonePad : .emailAddress)
+                    .autocapitalization(.none)
+                
+                Button(action: searchUsers) {
+                    Text("Search")
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(Color.blue, lineWidth: 1)
+                        )
+                }
+            }
+            .padding()
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(10)
+            .padding(.horizontal)
+            
+            if isSearching {
+                ProgressView()
+                    .padding()
+            }
+            
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .padding()
+            }
+            
+            if searchResults.isEmpty && !searchQuery.isEmpty && !isSearching {
+                Text("No user found with this \(searchType == .email ? "email" : "phone number").")
+                    .padding()
+            }
+            
             List(searchResults) { user in
                 Button(action: {
                     selectedUser = user
                 }) {
                     HStack {
-                        Text(user.name)
+                        VStack(alignment: .leading) {
+                            Text(user.name)
+                            Text(user.email)
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+                        
                         Spacer()
-                        Text(user.email)
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
+                        
+                        if selectedUser?.id == user.id {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                        }
                     }
                 }
             }
-
+            .listStyle(PlainListStyle())
+            
             Spacer()
-
+            
             if let selectedUser = selectedUser {
                 Button(action: {
                     addUserToGroup(user: selectedUser)
@@ -74,39 +139,75 @@ struct AddUserToGroupView: View {
                 .padding()
             }
         }
-        .padding()
     }
-
+    
     func searchUsers() {
+        guard !searchQuery.isEmpty else { return }
+        
+        isSearching = true
+        errorMessage = nil
+        
+        let field = searchType == .email ? "email" : "phoneNumber"
+        let db = Firestore.firestore()
+        
         db.collection("users")
-            .whereField("email", isEqualTo: searchQuery)
+            .whereField(field, isEqualTo: searchQuery)
             .getDocuments { snapshot, error in
+                isSearching = false
+                
                 if let error = error {
-                    print("Error searching users: \(error)")
+                    errorMessage = "Error searching users: \(error.localizedDescription)"
                     return
                 }
-
-                guard let documents = snapshot?.documents else { return }
-                searchResults = documents.compactMap { try? $0.data(as: User.self) }
+                
+                guard let documents = snapshot?.documents, !documents.isEmpty else {
+                    errorMessage = "No user found with this \(searchType == .email ? "email" : "phone number")"
+                    return
+                }
+                
+                // Filter out users already in the group
+                self.searchResults = documents.compactMap { doc -> UserSearchResult? in
+                    let data = doc.data()
+                    
+                    // Skip if user is already in the group
+                    if group.members.contains(doc.documentID) {
+                        errorMessage = "This user is already in the group"
+                        return nil
+                    }
+                    
+                    guard let firstName = data["firstName"] as? String,
+                          let lastName = data["lastName"] as? String,
+                          let email = data["email"] as? String else {
+                        return nil
+                    }
+                    
+                    return UserSearchResult(
+                        id: doc.documentID,
+                        name: "\(firstName) \(lastName)",
+                        email: email,
+                        phoneNumber: data["phoneNumber"] as? String
+                    )
+                }
             }
     }
-
-    func inviteUser() {
-        print("Sending invite to \(searchQuery)...")
-        // Logic to send an invite (e.g., via email or SMS)
-    }
-
-    func addUserToGroup(user: User) {
-        guard let groupId = group.id else { return }
-
-        db.collection("groups").document(groupId).updateData([
-            "members": FieldValue.arrayUnion([user.id])
-        ]) { error in
-            if let error = error {
-                print("Error adding user to group: \(error)")
-                return
+    
+    func addUserToGroup(user: UserSearchResult) {
+        guard let groupID = group.id else {
+            errorMessage = "Invalid group ID"
+            return
+        }
+        
+        isSearching = true
+        
+        dataManager.addUserToGroup(groupID: groupID, userID: user.id) { success, error in
+            isSearching = false
+            
+            if success {
+                onUserAdded()
+                dismiss()
+            } else if let error = error {
+                errorMessage = error
             }
-            dismiss()
         }
     }
 }
