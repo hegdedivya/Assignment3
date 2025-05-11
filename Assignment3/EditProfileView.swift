@@ -9,36 +9,48 @@ import SwiftUI
 
 struct EditProfileView: View {
     @Environment(\.dismiss) var dismiss
-    @Binding var user: UserModel
-    var onSave: (UserModel) -> Void
+    @ObservedObject var viewModel: UserProfileViewModel
+    @State var user: User
 
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("Name")) {
-                    TextField("First Name", text: $user.firstName)
-                    TextField("Last Name", text: $user.lastName)
-                }
-
-                Section(header: Text("Phone")) {
-                    TextField("Phone Number", text: $user.phoneNumber)
-                }
-
-                Section {
-                    Button("Save Changes") {
-                        onSave(user)
+                Form {
+                    Section(header: Text("Personal Info")) {
+                        TextField("First Name", text: $user.firstName)
+                            .padding()
+                        TextField("Last Name", text: $user.lastName)
+                            .padding()
                     }
-                    .frame(maxWidth: .infinity)
-                    .foregroundColor(.white)
-                    .padding()
-                    .background(Color.primaryYellow)
-                    .cornerRadius(10)
+                    Section(header: Text("Contact")) {
+                        TextField("Email", text: $user.email)
+                            .padding()
+                        TextField("Phone Number", text: $user.phoneNumber)
+                            .padding()
+                            .keyboardType(.phonePad)
+                            
+                        
+                    }
+                    
+                }.background(Color.lightYellow)
+            
+            
+            .navigationTitle("Edit Profile")
+            
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        viewModel.updateUser(updatedUser: user)
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
                 }
             }
-            .navigationTitle("Edit Profile")
-            .navigationBarItems(trailing: Button("Cancel") {
-                dismiss()
-            })
+            .background(Color.lightYellow)
         }
     }
 }
+

@@ -12,8 +12,6 @@ struct DashboardView: View {
     var body: some View {
         let userID = dataManager.getCurrentUserID()
         TabView {
-            
-            
             GroupView()
                 .tabItem {
                     Label("Group", systemImage: "person.3.fill")

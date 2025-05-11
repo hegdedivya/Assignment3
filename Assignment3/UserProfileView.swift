@@ -1,70 +1,92 @@
-//
-//  UserProfileView.swift
-//  Assignment3
-//
-//  Created by Divya on 6/5/2025.
-//
-
 import SwiftUI
 
 struct UserProfileView: View {
-    @StateObject private var viewModel = UserProfileViewModel()
-    @State private var showEdit = false
-    @State private var editableUser: UserModel = UserModel(id: nil, firstName: "", lastName: "", email: "", phoneNumber: "", createdAt: Date())
-
     let userId: String
+    @StateObject private var viewModel = UserProfileViewModel()
+    @State private var showEditView = false
 
     var body: some View {
-        ZStack {
-            Color.lightYellow.ignoresSafeArea()
-
-            if let user = viewModel.user {
-                ScrollView {
-                    VStack(spacing: 24) {
-                        Image(systemName: "person.crop.circle.fill")
+        NavigationView {
+            ZStack {
+                Color.yellow.opacity(0.1)
+                    .ignoresSafeArea()
+                VStack {
+                    if let user = viewModel.user {
+                        Image(systemName: "person.crop.circle")
                             .resizable()
-                            .frame(width: 120, height: 120)
+                            .frame(width: 150, height: 150)
                             .foregroundColor(.primaryYellow)
+                            .padding()
 
-                        Text(user.fullName)
+                        Text("\(user.firstName) \(user.lastName)")
                             .font(.title)
-                            .foregroundColor(.primaryYellow)
+                            .bold()
+                            .padding()
 
-                        UserDetailCard(iconName: "envelope", title: "Email", value: user.email)
-                        UserDetailCard(iconName: "phone", title: "Phone", value: user.phoneNumber)
-                        UserDetailCard(iconName: "calendar", title: "Joined", value: user.createdAt.formatted(date: .abbreviated, time: .shortened))
-
-                        Button("Edit Profile") {
-                            editableUser = user
-                            showEdit = true
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "phone")
+                                    .foregroundColor(.white)
+                                    .padding(10)
+                                    .background(Color.primaryYellow)
+                                    .clipShape(Circle())
+                                Text("Phone: \(user.phoneNumber)")
+                                    .padding()
+                            }
+                            Divider()
+                            HStack {
+                                Image(systemName: "envelope")
+                                    .foregroundColor(.white)
+                                    .padding(10)
+                                    .background(Color.primaryYellow)
+                                    .clipShape(Circle())
+                                Text("Email: \(user.email)")
+                                    .padding()
+                            }
+                            Divider()
+                            HStack {
+                                Image(systemName: "calendar")
+                                    .foregroundColor(.white)
+                                    .padding(10)
+                                    .background(Color.primaryYellow)
+                                    .clipShape(Circle())
+                                Text("Joined: \(user.createdAt.formatted(date: .abbreviated, time: .shortened))")
+                                    .padding()
+                            }
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color.primaryYellow)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                        .background(Color.white)
+                        .cornerRadius(20)
                         .padding(.horizontal)
+
+                    } else {
+                        ProgressView("Loading...")
+                    }
+
+                    Button("Edit Profile") {
+                        showEditView = true
                     }
                     .padding()
-                }
-                .fullScreenCover(isPresented: $showEdit) {
-                    EditProfileView(user: $editableUser) { updatedUser in
-                        viewModel.updateUser(updatedUser) { success in
-                            if success {
-                                showEdit = false
-                            }
+                    .foregroundColor(.white)
+                    .background(Color.primaryYellow)
+                    .cornerRadius(10)
+                    .padding()
+                    .sheet(isPresented: $showEditView) {
+                        if let user = viewModel.user {
+                            EditProfileView(viewModel: viewModel, user: user)
                         }
                     }
                 }
-            } else {
-                ProgressView("Loading...")
+                .navigationTitle("Profile")
             }
-        }
-        .onAppear {
-            viewModel.fetchUser(withId: userId)
+            .onAppear {
+                viewModel.fetchUser(withId: userId)
+            }
         }
     }
 }
+
 #Preview {
-    UserProfileView(userId: "0Osua46bIQOVxdrx5fP3D4qNmKB2")
+    UserProfileView(userId: "sampleUserID")
 }

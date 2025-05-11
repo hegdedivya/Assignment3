@@ -5,15 +5,6 @@
 //  Created by Divya on 6/5/2025.
 //
 
-import Foundation
-import FirebaseFirestore
-
-struct User: Identifiable, Codable {
-    @DocumentID var id: String? // Firestore document ID
-    let name: String
-    let email: String
-    let profileImageName: String? // Optional profile picture URL
-}
 
 /*
 struct User {
@@ -28,41 +19,44 @@ class UserViewModel: ObservableObject {
 */
 
 
-class UserProfileViewModel: ObservableObject {
-    @Published var user: UserModel?
+import Foundation
+import FirebaseFirestore
 
-    private let db = Firestore.firestore()
+class UserProfileViewModel: ObservableObject {
+    @Published var user: User?
+
+    private var db = Firestore.firestore()
 
     func fetchUser(withId id: String) {
-        db.collection("users").document(id).getDocument { document, error in
-            if let document = document, document.exists {
-                do {
-                    self.user = try document.data(as: UserModel.self)
-                } catch {
-                    print("Decoding error: \(error)")
-                }
+        db.collection("users").document(id).getDocument { snapshot, error in
+            if let error = error {
+                print("Error fetching user: \(error)")
+                return
+            }
+
+            guard let snapshot = snapshot, snapshot.exists,
+                  let data = snapshot.data(),
+                  let user = User(id: snapshot.documentID, data: data) else {
+                print("Document does not exist or is malformed.")
+                return
+            }
+
+            DispatchQueue.main.async {
+                self.user = user
             }
         }
     }
 
-    func updateUser(_ user: UserModel, completion: @escaping (Bool) -> Void) {
-        guard let id = user.id else {
-            completion(false)
-            return
-        }
-        do {
-            try db.collection("users").document(id).setData(from: user) { error in
-                if let error = error {
-                    print("Update error: \(error)")
-                    completion(false)
-                } else {
-                    self.user = user
-                    completion(true)
+    func updateUser(updatedUser: User) {
+        db.collection("users").document(updatedUser.id).setData(updatedUser.dictionary) { error in
+            if let error = error {
+                print("Error updating user: \(error)")
+            } else {
+                DispatchQueue.main.async {
+                    self.user = updatedUser
                 }
+                print("User successfully updated")
             }
-        } catch {
-            print("Encoding error: \(error)")
-            completion(false)
         }
     }
 }
