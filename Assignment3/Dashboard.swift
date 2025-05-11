@@ -25,7 +25,7 @@ struct DashboardView: View {
                     Label("Group", systemImage: "person.3.fill")
                 }
 
-                UserProfileView()
+            UserProfileView(userId: "0Osua46bIQOVxdrx5fP3D4qNmKB2")
                     .tabItem {
                         Label("Account", systemImage: "person.crop.circle")
                     }

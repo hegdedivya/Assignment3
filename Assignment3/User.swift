@@ -6,8 +6,26 @@
 //
 
 import Foundation
+//import FirebaseFirestore
 
-struct UserG: Identifiable {
-    let id: String
-    let name: String
+struct UserModel: Identifiable, Codable {
+    var id: String?
+    var firstName: String
+    var lastName: String
+    var email: String
+    var phoneNumber: String
+    var createdAt: Date
+
+    var fullName: String {
+        "\(firstName) \(lastName)"
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case firstName
+        case lastName
+        case email
+        case phoneNumber //= "Phone number"
+        case createdAt
+    }
 }

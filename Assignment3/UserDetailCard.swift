@@ -8,11 +8,28 @@
 import SwiftUI
 
 struct UserDetailCard: View {
+    let iconName: String
+    let title: String
+    let value: String
+
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        HStack(spacing: 16) {
+            Image(systemName: iconName)
+                .foregroundColor(.white)
+                .padding(10)
+                .background(Color.primaryYellow)
+                .clipShape(Circle())
+
+            VStack(alignment: .leading) {
+                Text(title).font(.caption).foregroundColor(.gray)
+                Text(value).font(.body)
+            }
+            Spacer()
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
 }
 
-#Preview {
-    UserDetailCard()
-}
