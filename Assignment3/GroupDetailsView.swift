@@ -9,7 +9,7 @@ import SwiftUI
 
 struct GroupDetailView: View {
     var group: Group
-    @State private var isAddUserPresented: Bool = false // Controls the "Add User" modal
+    @State private var isAddUserPresented: Bool = false
 
     var body: some View {
         VStack {
@@ -46,5 +46,11 @@ struct GroupDetailView: View {
         }
         .padding()
         .navigationTitle(group.name)
+    }
+}
+
+struct GroupDetailView_Previews: PreviewProvider {
+    static var previews: some View {
+        GroupDetailView(group: Group(id: "1", name: "Trip to Bali", members: ["John", "Jane"], createdAt: Date()))
     }
 }

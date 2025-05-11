@@ -9,22 +9,19 @@ import FirebaseFirestore
 import FirebaseAuth
 
 struct GroupView: View {
-    @State private var groups: [Group] = [] // List of groups the user belongs to
-    @State private var isAddGroupPresented: Bool = false // Modal for adding a group
-
+    @State private var groups: [Group] = [] // List of groups
+    @State private var isAddGroupPresented: Bool = false // Add group modal
     private let db = Firestore.firestore()
     private let currentUserId = Auth.auth().currentUser?.uid ?? "userId1" // Replace with actual user ID
 
     var body: some View {
         NavigationView {
             VStack {
-                // Header
                 Text("My Groups")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .padding()
 
-                // List of Groups
                 List(groups) { group in
                     NavigationLink(destination: GroupDetailView(group: group)) {
                         Text(group.name)
@@ -48,7 +45,7 @@ struct GroupView: View {
                 }
                 .padding()
                 .sheet(isPresented: $isAddGroupPresented) {
-                    AddGroupView(onGroupAdded: fetchGroups)
+                    AddGroupWithUsersView(onGroupAdded: fetchGroups)
                 }
             }
             .onAppear(perform: fetchGroups)
@@ -56,10 +53,9 @@ struct GroupView: View {
         }
     }
 
-    // Fetch groups where the current user is a member
     func fetchGroups() {
         db.collection("groups")
-            .whereField("members", arrayContains: currentUserId) // Query groups containing the current user
+            .whereField("members", arrayContains: currentUserId)
             .getDocuments { snapshot, error in
                 if let error = error {
                     print("Error fetching groups: \(error)")
@@ -67,8 +63,13 @@ struct GroupView: View {
                 }
 
                 guard let documents = snapshot?.documents else { return }
-
                 self.groups = documents.compactMap { try? $0.data(as: Group.self) }
             }
+    }
+}
+
+struct GroupView_Previews: PreviewProvider {
+    static var previews: some View {
+        GroupView()
     }
 }

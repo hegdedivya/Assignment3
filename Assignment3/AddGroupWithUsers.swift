@@ -6,78 +6,57 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
-import FirebaseAuth
 
-struct AddGroupView: View {
+struct AddGroupWithUsersView: View {
     @Environment(\.dismiss) var dismiss
-        @State private var groupName: String = ""
-        @Binding var selectedGroup: Group? // First parameter
-        private let db = Firestore.firestore()
-        private let currentUserId = Auth.auth().currentUser?.uid ?? "userId1"
+    @State private var groupName: String = ""
+    @State private var navigateToAddUsers = false
 
-    var onGroupAdded: () -> Void // Callback to refresh the group list
+    var onGroupAdded: () -> Void
 
     var body: some View {
-        VStack {
-            Text("Add Group")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .padding()
-
-            TextField("Group Name", text: $groupName)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding()
-
-            Button(action: addGroup) {
+        NavigationView {
+            VStack {
                 Text("Create Group")
-                    .frame(maxWidth: .infinity)
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
                     .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
+
+                // Group Name Input
+                TextField("Group Name", text: $groupName)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding()
+
+                Spacer()
+
+                NavigationLink(
+                    destination: AddUsersToNewGroupView(
+                        groupName: groupName,
+                        onGroupAdded: onGroupAdded
+                    ),
+                    isActive: $navigateToAddUsers
+                ) {
+                    Button(action: {
+                        navigateToAddUsers = true
+                    }) {
+                        Text("Next")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(groupName.isEmpty ? Color.gray : Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    .padding()
+                    .disabled(groupName.isEmpty)
+                }
             }
             .padding()
-            .disabled(groupName.isEmpty)
-
-            Spacer()
-        }
-        .padding()
-    }
-
-    func addGroup() {
-        let newGroupId = UUID().uuidString
-        let groupData: [String: Any] = [
-            "name": groupName,
-            "members": [currentUserId],
-            "createdAt": FieldValue.serverTimestamp()
-        ]
-
-        db.collection("groups").document(newGroupId).setData(groupData) { error in
-            if let error = error {
-                print("Error creating group: \(error)")
-                return
-            }
-
-            db.collection("groups").document(newGroupId).getDocument { snapshot, error in
-                if let error = error {
-                    print("Error fetching new group: \(error)")
-                    return
-                }
-
-                guard let group = try? snapshot?.data(as: Group.self) else { return }
-
-                selectedGroup = group
-                onGroupAdded()
-                dismiss()
-            }
         }
     }
 }
 
-struct AddGroupView_Previews: PreviewProvider {
+struct AddGroupWithUsersView_Previews: PreviewProvider {
     static var previews: some View {
-        AddGroupView(selectedGroup: .constant(nil), onGroupAdded: {})
-
+        AddGroupWithUsersView(onGroupAdded: {})
     }
 }
