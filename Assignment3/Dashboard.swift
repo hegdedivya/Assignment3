@@ -9,22 +9,28 @@ import SwiftUI
 
 struct DashboardView: View {
     var body: some View {
+        var userID: String
         TabView {
             ActivitiesView()
                 .tabItem {
-                    Label("Activities 123", systemImage: "list.bullet.rectangle")
+                    Label("Activities", systemImage: "list.bullet.rectangle")
                 
                 }
-
+            FriendView()
+                .tabItem {
+                    Label("Friends",systemImage: "person.2.fill")
+                }
             GroupView()
                 .tabItem {
                     Label("Group", systemImage: "person.3.fill")
                 }
 
-            AccountView()
-                .tabItem {
-                    Label("Account", systemImage: "person.crop.circle")
-                }
+                UserProfileView()
+                    .tabItem {
+                        Label("Account", systemImage: "person.crop.circle")
+                    }
+            
+            
         }
     }
 }
@@ -32,3 +38,6 @@ struct DashboardView: View {
 #Preview {
     DashboardView()
 }
+
+
+

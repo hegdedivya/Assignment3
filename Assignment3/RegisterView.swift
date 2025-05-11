@@ -12,6 +12,7 @@ struct RegisterView: View {
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var email = ""
+    @State private var phoneNumber = ""
     @State private var password = ""
     @State private var confirmPassword = ""
     @State private var errorMessage = ""
@@ -34,6 +35,9 @@ struct RegisterView: View {
                 .keyboardType(.emailAddress)
                 .autocapitalization(.none)
             
+            TextField("Phone Number", text: $phoneNumber)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .keyboardType(.phonePad)
             SecureField("Password", text: $password)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
             
@@ -63,11 +67,27 @@ struct RegisterView: View {
     }
     
     func registerUser() {
+        guard phoneNumber.count == 10, phoneNumber.allSatisfy({ $0.isNumber }) else {
+                errorMessage = "Cell phone number with more than 10 digits"
+                return
+            }
         guard password == confirmPassword else {
             errorMessage = "Passwords do not match"
             return
         }
-        
+        let db = Firestore.firestore()
+        db.collection("users").whereField("phoneNumber", isEqualTo: phoneNumber).getDocuments { (snapshot, error) in
+            if let error = error {
+                self.errorMessage = "Error in checking phone number：\(error.localizedDescription)"
+                return
+            }
+            
+            if let snapshot = snapshot, !snapshot.documents.isEmpty {
+                // 已经存在相同手机号
+                self.errorMessage = "This cell phone number already exists, please re-enter your cell phone number."
+                return
+            }
+        }
         Auth.auth().createUser(withEmail: email, password: password) { result, error in
             if let error = error {
                 errorMessage = error.localizedDescription
@@ -77,6 +97,7 @@ struct RegisterView: View {
                     "firstName": firstName,
                     "lastName": lastName,
                     "email": email,
+                    "phoneNumber": phoneNumber,
                     "createdAt": Timestamp()
                 ]) { err in
                     if let err = err {

@@ -8,7 +8,7 @@
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
             uuid = "644F6809-81A6-4CD0-92D7-571E8B2CAC38"
-            shouldBeEnabled = "Yes"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Assignment3/ActivitiesView.swift"
@@ -20,11 +20,11 @@
             landmarkType = "24">
             <Locations>
                <Location
-                  uuid = "644F6809-81A6-4CD0-92D7-571E8B2CAC38 - bbb6809d47985c2c"
+                  uuid = "644F6809-81A6-4CD0-92D7-571E8B2CAC38 - 71ae04ec4ef07e4a"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "closure #1 () -&gt; SwiftUI.ForEach&lt;Swift.Array&lt;Assignment3.Activity&gt;, Swift.Optional&lt;Swift.String&gt;, SwiftUI.NavigationLink&lt;SwiftUI.VStack&lt;SwiftUI.TupleView&lt;(SwiftUI.Text, SwiftUI.Text)&gt;&gt;, Assignment3.ActivityDetailView&gt;&gt; in closure #1 () -&gt; SwiftUI._ConditionalContent&lt;SwiftUI.ProgressView&lt;SwiftUI.Text, SwiftUI.EmptyView&gt;, &lt;&lt;opaque return type of SwiftUI.View.navigationTitle(SwiftUI.LocalizedStringKey) -&gt; some&gt;&gt;.0&gt; in Assignment3.ActivitiesView.body.getter : some"
+                  symbolName = "closure #1 () -&gt; SwiftUI.ForEach&lt;Swift.Array&lt;Assignment3.Activity&gt;, Swift.String, SwiftUI.NavigationLink&lt;SwiftUI.VStack&lt;SwiftUI.TupleView&lt;(SwiftUI.Text, SwiftUI.Text)&gt;&gt;, Assignment3.ActivityDetailView&gt;&gt; in closure #1 () -&gt; SwiftUI._ConditionalContent&lt;SwiftUI.ProgressView&lt;SwiftUI.Text, SwiftUI.EmptyView&gt;, &lt;&lt;opaque return type of SwiftUI.View.navigationTitle(SwiftUI.LocalizedStringKey) -&gt; some&gt;&gt;.0&gt; in Assignment3.ActivitiesView.body.getter : some"
                   moduleName = "Assignment3.debug.dylib"
                   usesParentBreakpointCondition = "Yes"
                   urlString = "file:///Users/anyuxin/Downloads/Assignment3.1/Assignment3/ActivitiesView.swift"
@@ -34,11 +34,11 @@
                   endingLineNumber = "35">
                </Location>
                <Location
-                  uuid = "644F6809-81A6-4CD0-92D7-571E8B2CAC38 - a6bc04bed67263da"
+                  uuid = "644F6809-81A6-4CD0-92D7-571E8B2CAC38 - bd40e7729b4c2154"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "closure #1 (Assignment3.Activity) -&gt; SwiftUI.NavigationLink&lt;SwiftUI.VStack&lt;SwiftUI.TupleView&lt;(SwiftUI.Text, SwiftUI.Text)&gt;&gt;, Assignment3.ActivityDetailView&gt; in closure #1 () -&gt; SwiftUI.ForEach&lt;Swift.Array&lt;Assignment3.Activity&gt;, Swift.Optional&lt;Swift.String&gt;, SwiftUI.NavigationLink&lt;SwiftUI.VStack&lt;SwiftUI.TupleView&lt;(SwiftUI.Text, SwiftUI.Text)&gt;&gt;, Assignment3.ActivityDetailView&gt;&gt; in closure #1 () -&gt; SwiftUI._ConditionalContent&lt;SwiftUI.ProgressView&lt;SwiftUI.Text, SwiftUI.EmptyView&gt;, &lt;&lt;opaque return type of SwiftUI.View.navigationTitle(SwiftUI.LocalizedStringKey) -&gt; some&gt;&gt;.0&gt; in Assignment3.ActivitiesView.body.getter : some"
+                  symbolName = "closure #1 (Assignment3.Activity) -&gt; SwiftUI.NavigationLink&lt;SwiftUI.VStack&lt;SwiftUI.TupleView&lt;(SwiftUI.Text, SwiftUI.Text)&gt;&gt;, Assignment3.ActivityDetailView&gt; in closure #1 () -&gt; SwiftUI.ForEach&lt;Swift.Array&lt;Assignment3.Activity&gt;, Swift.String, SwiftUI.NavigationLink&lt;SwiftUI.VStack&lt;SwiftUI.TupleView&lt;(SwiftUI.Text, SwiftUI.Text)&gt;&gt;, Assignment3.ActivityDetailView&gt;&gt; in closure #1 () -&gt; SwiftUI._ConditionalContent&lt;SwiftUI.ProgressView&lt;SwiftUI.Text, SwiftUI.EmptyView&gt;, &lt;&lt;opaque return type of SwiftUI.View.navigationTitle(SwiftUI.LocalizedStringKey) -&gt; some&gt;&gt;.0&gt; in Assignment3.ActivitiesView.body.getter : some"
                   moduleName = "Assignment3.debug.dylib"
                   usesParentBreakpointCondition = "Yes"
                   urlString = "file:///Users/anyuxin/Downloads/Assignment3.1/Assignment3/ActivitiesView.swift"
