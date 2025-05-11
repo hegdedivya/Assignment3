@@ -8,18 +8,19 @@ import SwiftUI
 import FirebaseFirestore
 import Foundation
 
-struct Expense: Identifiable, Codable {
-    var id = UUID()
-    var itemName: String
-    var amount: Double
-}
 
-struct Activity: Identifiable, Codable {
+struct Activity: Identifiable {
     var id: String
     var name: String
     var date: Date
     var members: [String]
     var expenses: [Expense]
+}
+
+struct Expense {
+    var itemName: String
+    var amount: Double
+    var paidBy: String?
 }
 
 struct ActivitiesView: View {

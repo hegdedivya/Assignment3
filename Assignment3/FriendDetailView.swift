@@ -1,4 +1,5 @@
 // FriendDetailView.swift
+// FriendDetailView.swift
 
 import SwiftUI
 
@@ -11,7 +12,7 @@ extension Friend {
         // Create a Group with the friend and current user as members
         return Group(
             id: self.id,
-            name: "Expense with \(self.name)",
+            name: self.groupName ?? "Expense with \(self.name)",
             members: [currentUserID, self.id ?? ""],
             createdAt: Date(),
             type: "Friend",
@@ -25,36 +26,30 @@ struct FriendDetailView: View {
     @StateObject private var viewModel = FriendViewModel()
     @State private var showingPaymentSheet = false
     @State private var showingAddExpenseSheet = false
+    @State private var showingRemindDialog = false
     
     var body: some View {
         VStack {
             // Friend profile card
             VStack(spacing: 10) {
-                if let imageURL = friend.imageURL, !imageURL.isEmpty {
-                    AsyncImage(url: URL(string: imageURL)) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } placeholder: {
-                        Circle()
-                            .fill(Color.gray.opacity(0.2))
-                    }
+                Circle()
+                    .fill(Color.teal.opacity(0.8))
                     .frame(width: 80, height: 80)
-                    .clipShape(Circle())
-                } else {
-                    Circle()
-                        .fill(Color.teal.opacity(0.8))
-                        .frame(width: 80, height: 80)
-                        .overlay(
-                            Text(String(friend.name.prefix(1).uppercased()))
-                                .foregroundColor(.white)
-                                .font(.system(size: 36, weight: .bold))
-                        )
-                }
+                    .overlay(
+                        Text(String(friend.name.prefix(1).uppercased()))
+                            .foregroundColor(.white)
+                            .font(.system(size: 36, weight: .bold))
+                    )
                 
                 Text(friend.name)
                     .font(.title2)
                     .fontWeight(.bold)
+                
+                if let groupName = friend.groupName {
+                    Text("from \(groupName)")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
                 
                 if friend.amountOwed > 0 {
                     Text("\(friend.name) owes you $\(String(format: "%.2f", friend.amountOwed))")
@@ -73,12 +68,18 @@ struct FriendDetailView: View {
                 HStack(spacing: 20) {
                     if friend.amountOwed != 0 {
                         Button(action: {
-                            showingPaymentSheet = true
+                            if friend.amountOwed > 0 {
+                                // Friend owes user - show remind dialog
+                                showingRemindDialog = true
+                            } else {
+                                // User owes friend - proceed to payment
+                                showingPaymentSheet = true
+                            }
                         }) {
-                            Text("Settle up")
+                            Text(friend.amountOwed > 0 ? "Remind" : "Settle up")
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 10)
-                                .background(Color.orange)
+                                .background(friend.amountOwed > 0 ? Color.blue : Color.orange)
                                 .foregroundColor(.white)
                                 .cornerRadius(10)
                         }
@@ -148,6 +149,17 @@ struct FriendDetailView: View {
         }
         .sheet(isPresented: $showingAddExpenseSheet) {
             AddExpenseView(group: friend.toGroup())
+        }
+        .alert(isPresented: $showingRemindDialog) {
+            Alert(
+                title: Text("Remind \(friend.name)"),
+                message: Text("Send a reminder that they owe you $\(String(format: "%.2f", friend.amountOwed))?"),
+                primaryButton: .default(Text("Send")) {
+                    // In a real app, this would send a push notification
+                    print("Reminder sent to \(friend.name)")
+                },
+                secondaryButton: .cancel()
+            )
         }
     }
 }
