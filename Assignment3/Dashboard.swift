@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct DashboardView: View {
-    var userID: String
     var body: some View {
+        var userID: String
         TabView {
             ActivitiesView()
                 .tabItem {
@@ -36,5 +36,8 @@ struct DashboardView: View {
 }
 
 #Preview {
-    DashboardView(userID: "mock-user-id")
+    DashboardView()
 }
+
+
+
