@@ -12,7 +12,7 @@ struct DashboardView: View {
         TabView {
             ActivitiesView()
                 .tabItem {
-                    Label("Activities 123", systemImage: "list.bullet.rectangle")
+                    Label("Activities", systemImage: "list.bullet.rectangle")
                 
                 }
 
