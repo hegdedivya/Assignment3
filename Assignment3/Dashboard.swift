@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct DashboardView: View {
+    var userID: String
     var body: some View {
         TabView {
             ActivitiesView()
@@ -35,5 +36,5 @@ struct DashboardView: View {
 }
 
 #Preview {
-    DashboardView()
+    DashboardView(userID: "mock-user-id")
 }
