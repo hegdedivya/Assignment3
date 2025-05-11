@@ -15,16 +15,21 @@ struct DashboardView: View {
                     Label("Activities", systemImage: "list.bullet.rectangle")
                 
                 }
-
+            FriendView()
+                .tabItem {
+                    Label("Friends",systemImage: "person.2.fill")
+                }
             GroupView()
                 .tabItem {
                     Label("Group", systemImage: "person.3.fill")
                 }
 
-            AccountView()
-                .tabItem {
-                    Label("Account", systemImage: "person.crop.circle")
-                }
+                UserProfileView()
+                    .tabItem {
+                        Label("Account", systemImage: "person.crop.circle")
+                    }
+            
+            
         }
     }
 }
