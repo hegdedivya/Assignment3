@@ -8,8 +8,9 @@
 import SwiftUI
 
 struct DashboardView: View {
+    let dataManager = FirebaseDataManager.shared
     var body: some View {
-        var userID: String
+        let userID = dataManager.getCurrentUserID()
         TabView {
             ActivitiesView()
                 .tabItem {
@@ -25,10 +26,18 @@ struct DashboardView: View {
                     Label("Group", systemImage: "person.3.fill")
                 }
 
-            UserProfileView(userId: "0Osua46bIQOVxdrx5fP3D4qNmKB2")
+            if let userID = dataManager.getCurrentUserID() {
+                            UserProfileView(userId: userID)
+                                .tabItem {
+                                    Label("Account", systemImage: "person.crop.circle")
+                                }
+            } else {
+                // Show a placeholder or login prompt if there's no user ID
+                Text("Please log in to view your profile")
                     .tabItem {
                         Label("Account", systemImage: "person.crop.circle")
                     }
+            }
             
             
         }
