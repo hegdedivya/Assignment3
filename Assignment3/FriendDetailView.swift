@@ -1,11 +1,24 @@
-//
-//  FriendDetailView.swift
-//  Assignment3
-//
-//  Created by Minkun He on 9/5/2025.
-//
+// FriendDetailView.swift
 
 import SwiftUI
+
+// Friend to Group adapter extension
+extension Friend {
+    func toGroup() -> Group {
+        // Get current user ID
+        let currentUserID = FirebaseDataManager.shared.getCurrentUserID() ?? ""
+        
+        // Create a Group with the friend and current user as members
+        return Group(
+            id: self.id,
+            name: "Expense with \(self.name)",
+            members: [currentUserID, self.id ?? ""],
+            createdAt: Date(),
+            type: "Friend",
+            createdBy: currentUserID
+        )
+    }
+}
 
 struct FriendDetailView: View {
     var friend: Friend
@@ -134,7 +147,7 @@ struct FriendDetailView: View {
             PaymentView(friend: friend, amount: friend.amountOwed)
         }
         .sheet(isPresented: $showingAddExpenseSheet) {
-            AddExpenseView(friend: friend)
+            AddExpenseView(group: friend.toGroup())
         }
     }
 }
