@@ -4,6 +4,7 @@
 //
 
 
+
 import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
@@ -16,7 +17,6 @@ struct SettleUpView: View {
     
     @StateObject private var viewModel = SettleUpViewModel()
     @State private var showingConfirmation = false
-    @State private var showingPaymentSheet = false
     @State private var selectedPaymentMethod: PaymentMethod?
     @State private var settlementNote = ""
     
@@ -118,55 +118,38 @@ struct SettleUpView: View {
                         .padding(.horizontal)
                 }
                 
-                // Action buttons
-                VStack(spacing: 12) {
-                    if isUserOwing {
-                        // User owes money - show payment button
-                        Button(action: {
-                            if selectedPaymentMethod != nil {
-                                showingPaymentSheet = true
-                            } else {
-                                viewModel.errorMessage = "Please select a payment method"
-                            }
-                        }) {
-                            HStack {
-                                Text("Pay $\(String(format: "%.2f", abs(amount)))")
-                                
-                                if viewModel.isProcessing {
-                                    ProgressView()
-                                        .padding(.leading, 5)
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(selectedPaymentMethod != nil ? Color.orange : Color.gray.opacity(0.5))
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                        }
-                        .disabled(selectedPaymentMethod == nil || viewModel.isProcessing)
+                // Action button - Direct settlement
+                Button(action: {
+                    if selectedPaymentMethod != nil {
+                        // Show confirmation alert instead of navigating to another page
+                        showingConfirmation = true
                     } else {
-                        // User is owed money - show record payment button
-                        Button(action: {
-                            if selectedPaymentMethod != nil {
-                                showingConfirmation = true
-                            } else {
-                                viewModel.errorMessage = "Please select a payment method"
-                            }
-                        }) {
-                            Text("Record Payment Received")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(selectedPaymentMethod != nil ? Color.green : Color.gray.opacity(0.5))
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                        }
-                        .disabled(selectedPaymentMethod == nil)
+                        viewModel.errorMessage = "Please select a payment method"
                     }
+                }) {
+                    HStack {
+                        if viewModel.isProcessing {
+                            ProgressView()
+                                .padding(.trailing, 8)
+                        }
+                        
+                        if isUserOwing {
+                            Text("Pay $\(String(format: "%.2f", abs(amount)))")
+                        } else {
+                            Text("Record Payment Received")
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(selectedPaymentMethod != nil ? (isUserOwing ? Color.orange : Color.green) : Color.gray.opacity(0.5))
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
                 }
+                .disabled(selectedPaymentMethod == nil || viewModel.isProcessing)
                 .padding(.horizontal)
                 .padding(.bottom)
             }
-            .navigationTitle("Settle Up")
+            .navigationTitle(isUserOwing ? "Payment" : "Settle Up")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -177,24 +160,13 @@ struct SettleUpView: View {
             }
             .alert(isPresented: $showingConfirmation) {
                 Alert(
-                    title: Text("Record Payment"),
-                    message: Text("Mark this payment as received from \(friend?.name ?? "group members")?"),
-                    primaryButton: .default(Text("Record")) {
-                        recordPayment()
+                    title: Text("Confirm \(isUserOwing ? "Payment" : "Settlement")"),
+                    message: Text(getConfirmationMessage()),
+                    primaryButton: .default(Text("Confirm")) {
+                        processPayment()
                     },
                     secondaryButton: .cancel()
                 )
-            }
-            .sheet(isPresented: $showingPaymentSheet) {
-                if isUserOwing {
-                    if let friend = friend {
-                        PaymentView(friend: friend, amount: amount)
-                    } else {
-                        // For group settlements, we'd need a different payment view
-                        // For now, let's handle it as a simple transaction
-                        Text("Group payment not yet implemented")
-                    }
-                }
             }
             .onChange(of: viewModel.settlementCompleted) { completed in
                 if completed {
@@ -204,7 +176,15 @@ struct SettleUpView: View {
         }
     }
     
-    private func recordPayment() {
+    private func getConfirmationMessage() -> String {
+        if isUserOwing {
+            return "Confirm payment of $\(String(format: "%.2f", abs(amount))) to \(friend?.name ?? "group member")?"
+        } else {
+            return "Mark payment of $\(String(format: "%.2f", abs(amount))) as received from \(friend?.name ?? "group member")?"
+        }
+    }
+    
+    private func processPayment() {
         guard let selectedPaymentMethod = selectedPaymentMethod else { return }
         
         if let friend = friend {

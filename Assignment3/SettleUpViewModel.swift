@@ -3,7 +3,6 @@
 //  Assignment3
 //
 
-//
 
 import Foundation
 import FirebaseFirestore
@@ -18,6 +17,7 @@ class SettleUpViewModel: ObservableObject {
     private let db = Firestore.firestore()
     
     // Record payment between friends
+    // Update this function in SettleUpViewModel.swift
     func recordFriendPayment(friend: Friend, amount: Double, paymentMethod: PaymentMethod, note: String) {
         guard let currentUserID = Auth.auth().currentUser?.uid else {
             errorMessage = "You must be logged in"
@@ -30,8 +30,8 @@ class SettleUpViewModel: ObservableObject {
         // Create settlement record
         let settlement = Settlement(
             amount: abs(amount),
-            fromUserID: currentUserID,
-            toUserID: friend.id,
+            fromUserID: amount < 0 ? currentUserID : friend.id, // User owes friend or friend owes user
+            toUserID: amount < 0 ? friend.id : currentUserID,
             method: paymentMethod.name,
             note: note,
             status: .completed
@@ -56,9 +56,34 @@ class SettleUpViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     self.isProcessing = false
                     if success {
+                        // Create success notification
+                        self.createLocalNotification(
+                            title: "Payment Recorded",
+                            body: "Your payment of $\(String(format: "%.2f", abs(amount))) has been recorded."
+                        )
                         self.settlementCompleted = true
                     }
                 }
+            }
+        }
+    }
+
+    // Add this helper function to show a local notification
+    private func createLocalNotification(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        )
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error adding notification: \(error)")
             }
         }
     }
