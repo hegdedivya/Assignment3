@@ -373,6 +373,307 @@ class FirebaseDataManager: ObservableObject {
             completion(true, nil)
         }
     }
+    
+    /// Create a new activity
+    func createActivity(name: String, date: Date, members: [String], expenses: [ExpenseData], completion: @escaping (Bool, String?) -> Void) {
+        guard let currentUserID = getCurrentUserID() else {
+            completion(false, "You must be logged in to create an activity")
+            return
+        }
+        
+        // Include the current user in the members list if not already included
+        var allMembers = members
+        if !allMembers.contains(currentUserID) {
+            allMembers.append(currentUserID)
+        }
+        
+        // Convert expenses to the format expected by Firestore
+        let expensesData = expenses.map { expense in
+            [
+                "itemName": expense.itemName,
+                "amount": expense.amount
+            ]
+        }
+        
+        // Create activity data
+        let activityData: [String: Any] = [
+            "name": name,
+            "date": Timestamp(date: date),
+            "members": allMembers,
+            "expenses": expensesData
+        ]
+        
+        // Add to Firestore
+        db.collection("activities").document().setData(activityData) { error in
+            if let error = error {
+                completion(false, "Error creating activity: \(error.localizedDescription)")
+                return
+            }
+            
+            // Refresh activities
+            self.fetchUserActivities(userID: currentUserID)
+            completion(true, nil)
+        }
+    }
+
+    /// Update an existing activity
+    func updateActivity(activityID: String, name: String, date: Date, members: [String], expenses: [ExpenseData], completion: @escaping (Bool, String?) -> Void) {
+        guard let currentUserID = getCurrentUserID() else {
+            completion(false, "You must be logged in to update an activity")
+            return
+        }
+        
+        // Convert expenses to the format expected by Firestore
+        let expensesData = expenses.map { expense in
+            [
+                "itemName": expense.itemName,
+                "amount": expense.amount
+            ]
+        }
+        
+        let activityData: [String: Any] = [
+            "name": name,
+            "date": Timestamp(date: date),
+            "members": members,
+            "expenses": expensesData
+        ]
+        
+        db.collection("activities").document(activityID).updateData(activityData) { error in
+            if let error = error {
+                completion(false, "Error updating activity: \(error.localizedDescription)")
+                return
+            }
+            
+            // Activities will be refreshed automatically via listener
+            completion(true, nil)
+        }
+    }
+
+    /// Delete an activity
+    func deleteActivity(activityID: String, completion: @escaping (Bool, String?) -> Void) {
+        db.collection("activities").document(activityID).delete { error in
+            if let error = error {
+                completion(false, "Error deleting activity: \(error.localizedDescription)")
+                return
+            }
+            
+            // Activity will be removed automatically via listener
+            completion(true, nil)
+        }
+    }
+
+    // MARK: - Friend Management
+
+    /// Search for users by email
+    func searchUsersByEmail(_ email: String, completion: @escaping ([UserProfile], String?) -> Void) {
+        guard !email.isEmpty else {
+            completion([], "Please enter an email address")
+            return
+        }
+        
+        db.collection("users")
+            .whereField("email", isEqualTo: email)
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    completion([], "Search error: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let documents = snapshot?.documents, !documents.isEmpty else {
+                    completion([], "User not found")
+                    return
+                }
+                
+                var results: [UserProfile] = []
+                
+                for doc in documents {
+                    let data = doc.data()
+                    let userProfile = UserProfile(
+                        id: doc.documentID,
+                        email: data["email"] as? String ?? "",
+                        firstName: data["firstName"] as? String ?? "",
+                        lastName: data["lastName"] as? String ?? "",
+                        phoneNumber: data["phoneNumber"] as? String ?? ""
+                    )
+                    results.append(userProfile)
+                }
+                
+                completion(results, nil)
+            }
+    }
+
+    /// Add a friend
+    func addFriend(friendID: String, completion: @escaping (Bool, String?) -> Void) {
+        guard let currentUserID = getCurrentUserID() else {
+            completion(false, "You must be logged in to add friends")
+            return
+        }
+        
+        // Add friend to current user's friend list
+        db.collection("users").document(currentUserID).collection("friends").document(friendID).setData([
+            "addedAt": FieldValue.serverTimestamp()
+        ]) { error in
+            if let error = error {
+                completion(false, "Failed to add friend: \(error.localizedDescription)")
+                return
+            }
+            
+            // Add current user to friend's friend list (reciprocal)
+            self.db.collection("users").document(friendID).collection("friends").document(currentUserID).setData([
+                "addedAt": FieldValue.serverTimestamp()
+            ]) { error in
+                if let error = error {
+                    completion(false, "Failed to add friend: \(error.localizedDescription)")
+                    return
+                }
+                
+                completion(true, nil)
+            }
+        }
+    }
+
+    /// Fetch user's friends
+    func fetchUserFriends(userID: String, completion: @escaping ([UserProfile], String?) -> Void) {
+        db.collection("users").document(userID).collection("friends").getDocuments { friendSnapshot, error in
+            if let error = error {
+                completion([], "Error fetching friends: \(error.localizedDescription)")
+                return
+            }
+            
+            var friends: [UserProfile] = []
+            let dispatchGroup = DispatchGroup()
+            
+            for friendDoc in friendSnapshot?.documents ?? [] {
+                let friendID = friendDoc.documentID
+                
+                dispatchGroup.enter()
+                self.db.collection("users").document(friendID).getDocument { userSnapshot, userError in
+                    defer { dispatchGroup.leave() }
+                    
+                    if let userError = userError {
+                        print("Error fetching friend details: \(userError)")
+                        return
+                    }
+                    
+                    guard let userData = userSnapshot?.data() else {
+                        print("Friend data not found")
+                        return
+                    }
+                    
+                    let friend = UserProfile(
+                        id: friendID,
+                        email: userData["email"] as? String ?? "",
+                        firstName: userData["firstName"] as? String ?? "",
+                        lastName: userData["lastName"] as? String ?? "",
+                        phoneNumber: userData["phoneNumber"] as? String ?? ""
+                    )
+                    
+                    friends.append(friend)
+                }
+            }
+            
+            dispatchGroup.notify(queue: .main) {
+                completion(friends, nil)
+            }
+        }
+    }
+
+    // MARK: - Expense Management
+
+    /// Create a new expense
+    func createExpense(name: String, amount: Double, groupID: String, paidBy: String?, completion: @escaping (Bool, String?) -> Void) {
+        guard getCurrentUserID() != nil else {
+            completion(false, "You must be logged in to create an expense")
+            return
+        }
+        
+        let expenseData: [String: Any] = [
+            "name": name,
+            "amount": amount,
+            "groupID": groupID,
+            "paidBy": paidBy ?? "",
+            "createdAt": FieldValue.serverTimestamp()
+        ]
+        
+        db.collection("expenses").document().setData(expenseData) { error in
+            if let error = error {
+                completion(false, "Error creating expense: \(error.localizedDescription)")
+                return
+            }
+            
+            completion(true, nil)
+        }
+    }
+
+    /// Update an existing expense
+    func updateExpense(expenseID: String, name: String, amount: Double, groupID: String, paidBy: String?, completion: @escaping (Bool, String?) -> Void) {
+        let expenseData: [String: Any] = [
+            "name": name,
+            "amount": amount,
+            "groupID": groupID,
+            "paidBy": paidBy ?? ""
+        ]
+        
+        db.collection("expenses").document(expenseID).updateData(expenseData) { error in
+            if let error = error {
+                completion(false, "Error updating expense: \(error.localizedDescription)")
+                return
+            }
+            
+            completion(true, nil)
+        }
+    }
+
+    /// Delete an expense
+    func deleteExpense(expenseID: String, completion: @escaping (Bool, String?) -> Void) {
+        db.collection("expenses").document(expenseID).delete { error in
+            if let error = error {
+                completion(false, "Error deleting expense: \(error.localizedDescription)")
+                return
+            }
+            
+            completion(true, nil)
+        }
+    }
+
+    // MARK: - Transaction Management
+
+    /// Create a new transaction
+    func createTransaction(amount: Double, from: String, to: String, expenseID: String?, groupID: String?, completion: @escaping (Bool, String?) -> Void) {
+        let transactionData: [String: Any] = [
+            "Amount": amount,
+            "from": from,
+            "to": to,
+            "SettledAt": FieldValue.serverTimestamp(),
+            "ExpenseID": expenseID ?? "",
+            "GroupID": groupID ?? ""
+        ]
+        
+        db.collection("Transactions").document().setData(transactionData) { error in
+            if let error = error {
+                completion(false, "Error creating transaction: \(error.localizedDescription)")
+                return
+            }
+            
+            // Refresh transactions
+            if let currentUserID = self.getCurrentUserID() {
+                self.fetchUserTransactions(userID: currentUserID)
+            }
+            completion(true, nil)
+        }
+    }
+
+    /// Update transaction status
+    func updateTransaction(transactionID: String, newData: [String: Any], completion: @escaping (Bool, String?) -> Void) {
+        db.collection("Transactions").document(transactionID).updateData(newData) { error in
+            if let error = error {
+                completion(false, "Error updating transaction: \(error.localizedDescription)")
+                return
+            }
+            
+            completion(true, nil)
+        }
+    }
 }
 
 // MARK: - Data Models
@@ -420,3 +721,4 @@ struct TransactionData: Identifiable {
     let expenseID: String?
     let groupID: String?
 }
+

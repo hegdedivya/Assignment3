@@ -1,5 +1,5 @@
 //
-//  Dashboard.swift
+//  DashboardView.swift
 //  Assignment3
 //
 //  Created by 安雨馨 on 2025/5/7.
@@ -8,9 +8,9 @@
 import SwiftUI
 
 struct DashboardView: View {
-    let dataManager = FirebaseDataManager.shared
+    @ObservedObject private var dataManager = FirebaseDataManager.shared
+    
     var body: some View {
-        let userID = dataManager.getCurrentUserID()
         TabView {
             GroupView()
                 .tabItem {
@@ -23,22 +23,26 @@ struct DashboardView: View {
             ActivitiesView()
                 .tabItem {
                     Label("Activities", systemImage: "list.bullet.rectangle")
-                
                 }
+            
+            // Always show UserProfileView with current user ID
             if let userID = dataManager.getCurrentUserID() {
-                            UserProfileView(userId: userID)
-                                .tabItem {
-                                    Label("Account", systemImage: "person.crop.circle")
-                                }
-            } else {
-                // Show a placeholder or login prompt if there's no user ID
-                Text("Please log in to view your profile")
+                UserProfileView(userId: userID)
                     .tabItem {
                         Label("Account", systemImage: "person.crop.circle")
                     }
+            } else {
+                // Fallback view while user data is loading
+                VStack {
+                    ProgressView("Loading profile...")
+                    Text("Please wait...")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                .tabItem {
+                    Label("Account", systemImage: "person.crop.circle")
+                }
             }
-            
-            
         }
     }
 }
@@ -46,6 +50,3 @@ struct DashboardView: View {
 #Preview {
     DashboardView()
 }
-
-
-
