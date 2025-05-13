@@ -4,9 +4,9 @@
 //
 //  Created by Minkun He on 9/5/2025.
 //
-
+ 
 import SwiftUI
-
+ 
 // Friend to Group adapter extension
 extension Friend {
     func toGroup() -> Group {
@@ -24,7 +24,7 @@ extension Friend {
         )
     }
 }
-
+ 
 struct FriendDetailView: View {
     var friend: Friend
     @StateObject private var viewModel = FriendViewModel()
@@ -32,6 +32,8 @@ struct FriendDetailView: View {
     @State private var showingAddExpenseSheet = false
     @State private var showingRemindDialog = false
     @State private var showingSettleUpSheet = false
+    @State private var isReminding = false
+    @State private var reminderMessage = ""
     
     var body: some View {
         VStack {
@@ -81,13 +83,21 @@ struct FriendDetailView: View {
                                 showingSettleUpSheet = true
                             }
                         }) {
-                            Text(friend.amountOwed > 0 ? "Remind" : "Settle up")
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(friend.amountOwed > 0 ? Color.blue : Color.orange)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
+                            HStack {
+                                if isReminding {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                        .padding(.trailing, 4)
+                                }
+                                Text(friend.amountOwed > 0 ? "Remind" : "Settle up")
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(friend.amountOwed > 0 ? Color.blue : Color.orange)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
                         }
+                        .disabled(isReminding)
                     }
                     
                     Button(action: {
@@ -107,6 +117,20 @@ struct FriendDetailView: View {
             .background(Color.gray.opacity(0.1))
             .cornerRadius(12)
             .padding(.horizontal)
+            
+            // Show reminder success message
+            if !reminderMessage.isEmpty {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text(reminderMessage)
+                        .foregroundColor(.green)
+                }
+                .padding()
+                .background(Color.green.opacity(0.1))
+                .cornerRadius(8)
+                .padding(.horizontal)
+            }
             
             // Shared activities list using your existing Activity model
             VStack(alignment: .leading) {
@@ -153,7 +177,7 @@ struct FriendDetailView: View {
         }
         .navigationTitle(friend.name)
         .onAppear {
-            viewModel.fetchSharedActivities(with: friend)
+            viewModel.loadSharedActivitiesBetweenUsers(with: friend)
         }
         .sheet(isPresented: $showingPaymentSheet) {
             PaymentView(friend: friend, amount: friend.amountOwed)
@@ -174,15 +198,36 @@ struct FriendDetailView: View {
                 title: Text("Remind \(friend.name)"),
                 message: Text("Send a reminder that they owe you $\(String(format: "%.2f", friend.amountOwed))?"),
                 primaryButton: .default(Text("Send")) {
-                    // In a real app, this would send a push notification
-                    print("Reminder sent to \(friend.name)")
+                    sendReminder()
                 },
                 secondaryButton: .cancel()
             )
         }
     }
+    
+    private func sendReminder() {
+        isReminding = true
+        reminderMessage = ""
+        
+        NotificationManager.shared.sendReminder(to: friend, amount: friend.amountOwed) { success, error in
+            DispatchQueue.main.async {
+                self.isReminding = false
+                
+                if success {
+                    self.reminderMessage = "Reminder sent to \(friend.name)"
+                    // Clear the message after 3 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self.reminderMessage = ""
+                    }
+                } else {
+                    // Show error
+                    self.reminderMessage = error ?? "Failed to send reminder"
+                }
+            }
+        }
+    }
 }
-
+ 
 struct FriendDetailView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
@@ -190,3 +235,4 @@ struct FriendDetailView_Previews: PreviewProvider {
         }
     }
 }
+ 

@@ -4,9 +4,9 @@
 //
 //  Created by 安雨馨 on 2025/5/7.
 //
-
+ 
 import SwiftUI
-
+ 
 struct DashboardView: View {
     @ObservedObject private var dataManager = FirebaseDataManager.shared
     
@@ -20,10 +20,7 @@ struct DashboardView: View {
                 .tabItem {
                     Label("Friends",systemImage: "person.2.fill")
                 }
-            ActivitiesView()
-                .tabItem {
-                    Label("Activities", systemImage: "list.bullet.rectangle")
-                }
+            
             
             // Always show UserProfileView with current user ID
             if let userID = dataManager.getCurrentUserID() {
@@ -46,7 +43,8 @@ struct DashboardView: View {
         }
     }
 }
-
+ 
 #Preview {
     DashboardView()
 }
+ 
