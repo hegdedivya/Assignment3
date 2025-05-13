@@ -62,7 +62,67 @@ class FriendViewModel: ObservableObject {
             }
         }
     }
-    
+    // Add this new function to your existing FriendViewModel.swift
+    func loadSharedActivitiesBetweenUsers(with friend: Friend) {
+        isLoading = true
+        sharedActivities = []
+        
+        guard let currentUserID = Auth.auth().currentUser?.uid else {
+            isLoading = false
+            return
+        }
+        
+        // Get the friend's user ID
+        let friendID = friend.id
+        
+        // Query activities that both users are part of
+        self.db.collection("activities")
+            .whereField("members", arrayContains: currentUserID)
+            .getDocuments { [weak self] activitySnapshot, activityError in
+                guard let self = self else { return }
+                
+                if let activityError = activityError {
+                    print("Error fetching activities: \(activityError)")
+                    self.isLoading = false
+                    return
+                }
+                
+                var sharedActivities: [Activity] = []
+                
+                for doc in activitySnapshot?.documents ?? [] {
+                    let data = doc.data()
+                    let id = doc.documentID
+                    
+                    guard let name = data["name"] as? String,
+                          let timestamp = data["date"] as? Timestamp,
+                          let members = data["members"] as? [String],
+                          members.contains(friendID),
+                          let expenseArray = data["expenses"] as? [[String: Any]] else {
+                        continue
+                    }
+                    
+                    let date = timestamp.dateValue()
+                    
+                    // Parse expenses using your Expense model
+                    let expenses: [Expense] = expenseArray.compactMap { dict in
+                        guard let itemName = dict["itemName"] as? String,
+                              let amount = dict["amount"] as? Double else {
+                            return nil
+                        }
+                        let paidBy = dict["paidBy"] as? String
+                        return Expense(itemName: itemName, amount: amount, paidBy: paidBy)
+                    }
+                    
+                    let activity = Activity(id: id, name: name, date: date, members: members, expenses: expenses)
+                    sharedActivities.append(activity)
+                }
+                
+                DispatchQueue.main.async {
+                    self.sharedActivities = sharedActivities
+                    self.isLoading = false
+                }
+            }
+    }
     // Fetch explicit friends from the friends collection
     private func fetchExplicitFriends(currentUserID: String, completion: @escaping ([Friend]) -> Void) {
         var friends: [Friend] = []

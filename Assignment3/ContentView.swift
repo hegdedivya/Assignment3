@@ -2,14 +2,6 @@
 //  ContentView.swift
 //  Assignment3
 //
-//  Created by Divya on 23/4/2025.
-//
-
-//
-//  ContentView.swift
-//  Assignment3
-//
-//  Created by Your Name on 2025/5/13.
 //
 
 import SwiftUI
@@ -25,7 +17,7 @@ struct ContentView: View {
     
     var body: some View {
         NavigationView {
-            SwiftUI.Group {  // Use SwiftUI.Group to avoid conflict with your Group struct
+            SwiftUI.Group {
                 if showingSplash {
                     // Splash Screen
                     SplashScreenView()
@@ -50,20 +42,34 @@ struct ContentView: View {
                 }
             }
         }
-        .navigationViewStyle(StackNavigationViewStyle()) // Ensure proper navigation on all devices
+        .navigationViewStyle(StackNavigationViewStyle())
+        // Listen for auth state changes
+        .onReceive(dataManager.$currentUser) { user in
+            if user != nil && !isLoggedIn {
+                // User just logged in
+                isLoggedIn = true
+                checkingAuth = false
+                showingSplash = false
+            } else if user == nil && isLoggedIn {
+                // User just logged out
+                isLoggedIn = false
+                checkingAuth = false
+                showingSplash = false
+            }
+        }
     }
     
     private func checkAuthenticationStatus() {
         // Check if user is already authenticated
         if let currentUser = Auth.auth().currentUser {
             // User is already logged in
-            isLoggedIn = true
             
             // Fetch user data
             dataManager.fetchUserDataAfterLogin()
             
-            // Wait a bit for user data to load, then hide splash
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            // Wait a bit for user data to load, then navigate to dashboard
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                isLoggedIn = true
                 checkingAuth = false
                 showingSplash = false
             }
