@@ -20,10 +20,7 @@ struct DashboardView: View {
                 .tabItem {
                     Label("Friends",systemImage: "person.2.fill")
                 }
-            ActivitiesView()
-                .tabItem {
-                    Label("Activities", systemImage: "list.bullet.rectangle")
-                }
+            
             
             // Always show UserProfileView with current user ID
             if let userID = dataManager.getCurrentUserID() {

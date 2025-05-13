@@ -2,7 +2,6 @@
 //  GroupSettleUpView.swift
 //  Assignment3
 //
-
 //
 
 import SwiftUI
@@ -17,6 +16,8 @@ struct GroupSettleUpView: View {
     @State private var showingIndividualSettleUp = false
     @State private var memberProfiles: [UserProfile] = []
     @State private var isLoadingMembers = false
+    @State private var reminderMessages: [String: String] = [:]
+    @State private var isReminding: [String: Bool] = [:]
     
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var dataManager = FirebaseDataManager.shared
@@ -67,10 +68,7 @@ struct GroupSettleUpView: View {
                         
                         LazyVStack(spacing: 12) {
                             ForEach(outstandingBalances) { balance in
-                                Button(action: {
-                                    selectedMember = balance.member
-                                    showingIndividualSettleUp = true
-                                }) {
+                                VStack(spacing: 8) {
                                     HStack(spacing: 16) {
                                         // Member avatar
                                         Circle()
@@ -102,28 +100,64 @@ struct GroupSettleUpView: View {
                                         
                                         Spacer()
                                         
-                                        // Settle button
-                                        VStack(spacing: 4) {
-                                            Image(systemName: "dollarsign.circle")
-                                                .font(.title2)
-                                                .foregroundColor(.blue)
-                                            
-                                            Text("Settle")
-                                                .font(.caption)
-                                                .foregroundColor(.blue)
+                                        // Action button - either Remind or Settle
+                                        if balance.amount > 0 {
+                                            // They owe you - show Remind button
+                                            Button(action: {
+                                                sendReminder(to: balance)
+                                            }) {
+                                                HStack {
+                                                    if isReminding[balance.member.id] == true {
+                                                        ProgressView()
+                                                            .scaleEffect(0.8)
+                                                    } else {
+                                                        Image(systemName: "bell")
+                                                        Text("Remind")
+                                                    }
+                                                }
+                                                .padding(.vertical, 10)
+                                                .padding(.horizontal, 16)
+                                                .background(Color.blue)
+                                                .foregroundColor(.white)
+                                                .cornerRadius(8)
+                                            }
+                                            .disabled(isReminding[balance.member.id] == true)
+                                        } else {
+                                            // You owe them - show Settle button
+                                            Button(action: {
+                                                selectedMember = balance.member
+                                                showingIndividualSettleUp = true
+                                            }) {
+                                                HStack {
+                                                    Image(systemName: "dollarsign.circle")
+                                                    Text("Settle")
+                                                }
+                                                .padding(.vertical, 10)
+                                                .padding(.horizontal, 16)
+                                                .background(Color.orange)
+                                                .foregroundColor(.white)
+                                                .cornerRadius(8)
+                                            }
                                         }
-                                        .padding(.vertical, 8)
-                                        .padding(.horizontal, 12)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .stroke(Color.blue, lineWidth: 1)
-                                        )
                                     }
-                                    .padding()
-                                    .background(Color.gray.opacity(0.05))
-                                    .cornerRadius(12)
+                                    
+                                    // Show reminder success message
+                                    if let message = reminderMessages[balance.member.id] {
+                                        HStack {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(.green)
+                                                .font(.caption)
+                                            Text(message)
+                                                .font(.caption)
+                                                .foregroundColor(.green)
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.leading, 66)
+                                    }
                                 }
-                                .buttonStyle(PlainButtonStyle())
+                                .padding()
+                                .background(Color.gray.opacity(0.05))
+                                .cornerRadius(12)
                             }
                         }
                         .padding(.horizontal)
@@ -132,17 +166,30 @@ struct GroupSettleUpView: View {
                 
                 Spacer()
                 
-                // Simplified settle all button
+                // Simplified settle all button (only for when everyone owes you)
                 if !outstandingBalances.isEmpty && allBalancesArePositive {
-                    Button(action: {
-                        settleAllBalances()
-                    }) {
-                        Text("Mark All as Paid")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
+                    VStack(spacing: 12) {
+                        Button(action: {
+                            sendAllReminders()
+                        }) {
+                            Text("Remind All")
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                        }
+                        
+                        Button(action: {
+                            settleAllBalances()
+                        }) {
+                            Text("Mark All as Paid")
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.green)
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                        }
                     }
                     .padding(.horizontal)
                     .padding(.bottom)
@@ -241,6 +288,42 @@ struct GroupSettleUpView: View {
         
         dispatchGroup.notify(queue: .main) {
             self.isLoadingMembers = false
+        }
+    }
+    
+    func sendReminder(to balance: GroupBalance) {
+        isReminding[balance.member.id] = true
+        reminderMessages[balance.member.id] = nil
+        
+        NotificationManager.shared.sendGroupReminder(
+            to: balance.member.id,
+            memberName: balance.member.fullName,
+            group: group,
+            amount: balance.amount
+        ) { success, error in
+            DispatchQueue.main.async {
+                self.isReminding[balance.member.id] = false
+                
+                if success {
+                    self.reminderMessages[balance.member.id] = "Reminder sent to \(balance.member.fullName)"
+                    // Clear the message after 3 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self.reminderMessages[balance.member.id] = nil
+                    }
+                } else {
+                    // Show error briefly
+                    self.reminderMessages[balance.member.id] = error ?? "Failed to send reminder"
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self.reminderMessages[balance.member.id] = nil
+                    }
+                }
+            }
+        }
+    }
+    
+    func sendAllReminders() {
+        for balance in outstandingBalances where balance.amount > 0 {
+            sendReminder(to: balance)
         }
     }
     

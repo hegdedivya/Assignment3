@@ -246,7 +246,8 @@ struct GroupDetailView: View {
                 BalancesSummaryView(
                     members: groupMembers,
                     totalBalances: totalBalances,
-                    currentUserID: dataManager.getCurrentUserID() ?? ""
+                    currentUserID: dataManager.getCurrentUserID() ?? "",
+                    group: group
                 )
             }
             
@@ -765,6 +766,9 @@ struct BalancesSummaryView: View {
     let members: [UserProfile]
     let totalBalances: [String: Double]
     let currentUserID: String
+    let group: Group
+    @State private var reminderMessages: [String: String] = [:]
+    @State private var isReminding = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -789,45 +793,87 @@ struct BalancesSummaryView: View {
             } else {
                 List {
                     ForEach(balanceItems, id: \.id) { item in
-                        HStack {
-                            // Person icon
-                            Circle()
-                                .fill(Color.teal.opacity(0.8))
-                                .frame(width: 40, height: 40)
-                                .overlay(
-                                    Text(String(item.name.prefix(1)))
-                                        .foregroundColor(.white)
-                                        .font(.system(size: 18, weight: .bold))
-                                )
-                            
-                            // Direction and amount
-                            VStack(alignment: .leading, spacing: 4) {
-                                if item.amount > 0 {
-                                    Text("\(item.name) owes you")
-                                        .font(.subheadline)
-                                } else {
-                                    Text("You owe \(item.name)")
-                                        .font(.subheadline)
+                        VStack(spacing: 8) {
+                            HStack {
+                                // Person icon
+                                Circle()
+                                    .fill(Color.teal.opacity(0.8))
+                                    .frame(width: 40, height: 40)
+                                    .overlay(
+                                        Text(String(item.name.prefix(1)))
+                                            .foregroundColor(.white)
+                                            .font(.system(size: 18, weight: .bold))
+                                    )
+                                
+                                // Direction and amount
+                                VStack(alignment: .leading, spacing: 4) {
+                                    if item.amount > 0 {
+                                        Text("\(item.name) owes you")
+                                            .font(.subheadline)
+                                    } else {
+                                        Text("You owe \(item.name)")
+                                            .font(.subheadline)
+                                    }
+                                    
+                                    Text(formatCurrency(abs(item.amount)))
+                                        .font(.headline)
+                                        .foregroundColor(item.amount > 0 ? .green : .orange)
                                 }
                                 
-                                Text(formatCurrency(abs(item.amount)))
-                                    .font(.headline)
-                                    .foregroundColor(item.amount > 0 ? .green : .orange)
+                                Spacer()
+                                
+                                // Action buttons
+                                HStack(spacing: 8) {
+                                    if item.amount > 0 {
+                                        // Show remind button if they owe you
+                                        Button(action: {
+                                            sendGroupReminder(to: item)
+                                        }) {
+                                            HStack {
+                                                if isReminding && reminderMessages[item.id] == nil {
+                                                    ProgressView()
+                                                        .scaleEffect(0.7)
+                                                } else {
+                                                    Text("Remind")
+                                                }
+                                            }
+                                            .font(.caption)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 5)
+                                            .background(Color.blue)
+                                            .foregroundColor(.white)
+                                            .cornerRadius(6)
+                                        }
+                                        .disabled(isReminding)
+                                    }
+                                    
+                                    // Settle button
+                                    Button(action: {
+                                        // Settle up action - handled by the parent view
+                                    }) {
+                                        Text("Settle")
+                                            .font(.caption)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 5)
+                                            .background(Color.orange)
+                                            .foregroundColor(.white)
+                                            .cornerRadius(6)
+                                    }
+                                }
                             }
                             
-                            Spacer()
-                            
-                            // Settle button
-                            Button(action: {
-                                // Settle up action - handled by the parent view
-                            }) {
-                                Text("Settle")
-                                    .font(.caption)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.blue)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(8)
+                            // Show reminder message if exists
+                            if let message = reminderMessages[item.id] {
+                                HStack {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .font(.caption)
+                                    Text(message)
+                                        .font(.caption)
+                                        .foregroundColor(.green)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.leading, 48)
                             }
                         }
                         .padding(.vertical, 4)
@@ -864,6 +910,33 @@ struct BalancesSummaryView: View {
         formatter.numberStyle = .currency
         formatter.currencySymbol = "$"
         return formatter.string(from: NSNumber(value: amount)) ?? "$\(amount)"
+    }
+    
+    // Send reminder in group context
+    private func sendGroupReminder(to item: BalanceItem) {
+        isReminding = true
+        reminderMessages[item.id] = nil
+        
+        NotificationManager.shared.sendGroupReminder(
+            to: item.id,
+            memberName: item.name,
+            group: group,
+            amount: item.amount
+        ) { success, error in
+            DispatchQueue.main.async {
+                self.isReminding = false
+                
+                if success {
+                    self.reminderMessages[item.id] = "Reminder sent to \(item.name)"
+                    // Clear the message after 3 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self.reminderMessages[item.id] = nil
+                    }
+                } else {
+                    self.reminderMessages[item.id] = error ?? "Failed to send reminder"
+                }
+            }
+        }
     }
 }
 

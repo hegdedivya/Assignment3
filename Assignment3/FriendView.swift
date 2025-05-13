@@ -17,6 +17,8 @@ struct FriendView: View {
     @State private var filterOption: FilterOption = .all
     @State private var showingRemindDialog = false
     @State private var showingSettleUpSheet = false
+    @State private var isReminding = false
+    @State private var reminderMessages: [String: String] = [:]
     
     enum FilterOption: String, CaseIterable {
         case all = "All"
@@ -114,63 +116,87 @@ struct FriendView: View {
                     List {
                         ForEach(filteredFriends) { friend in
                             NavigationLink(destination: FriendDetailView(friend: friend)) {
-                                HStack {
-                                    // Avatar
-                                    Circle()
-                                        .fill(Color.teal.opacity(0.8))
-                                        .frame(width: 50, height: 50)
-                                        .overlay(
-                                            Text(String(friend.name.prefix(1).uppercased()))
-                                                .foregroundColor(.white)
-                                                .font(.system(size: 20, weight: .bold))
-                                        )
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(friend.name)
-                                            .font(.headline)
+                                VStack(spacing: 8) {
+                                    HStack {
+                                        // Avatar
+                                        Circle()
+                                            .fill(Color.teal.opacity(0.8))
+                                            .frame(width: 50, height: 50)
+                                            .overlay(
+                                                Text(String(friend.name.prefix(1).uppercased()))
+                                                    .foregroundColor(.white)
+                                                    .font(.system(size: 20, weight: .bold))
+                                            )
                                         
-                                        if let groupName = friend.groupName {
-                                            Text("from \(groupName)")
-                                                .font(.caption)
-                                                .foregroundColor(.gray)
-                                        }
-                                        
-                                        if friend.amountOwed > 0 {
-                                            Text("owes you $\(String(format: "%.2f", friend.amountOwed))")
-                                                .font(.subheadline)
-                                                .foregroundColor(.green)
-                                        } else if friend.amountOwed < 0 {
-                                            Text("you owe $\(String(format: "%.2f", abs(friend.amountOwed)))")
-                                                .font(.subheadline)
-                                                .foregroundColor(.orange)
-                                        } else {
-                                            Text("settled up")
-                                                .font(.subheadline)
-                                                .foregroundColor(.gray)
-                                        }
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    if friend.amountOwed != 0 {
-                                        Button(action: {
-                                            selectedFriend = friend
-                                            if friend.amountOwed > 0 {
-                                                // Friend owes user - show remind dialog
-                                                showingRemindDialog = true
-                                            } else {
-                                                // User owes friend - show settle up sheet
-                                                showingSettleUpSheet = true
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(friend.name)
+                                                .font(.headline)
+                                            
+                                            if let groupName = friend.groupName {
+                                                Text("from \(groupName)")
+                                                    .font(.caption)
+                                                    .foregroundColor(.gray)
                                             }
-                                        }) {
-                                            Text(friend.amountOwed > 0 ? "Remind" : "Settle up")
+                                            
+                                            if friend.amountOwed > 0 {
+                                                Text("owes you $\(String(format: "%.2f", friend.amountOwed))")
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.green)
+                                            } else if friend.amountOwed < 0 {
+                                                Text("you owe $\(String(format: "%.2f", abs(friend.amountOwed)))")
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.orange)
+                                            } else {
+                                                Text("settled up")
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.gray)
+                                            }
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        if friend.amountOwed != 0 {
+                                            Button(action: {
+                                                selectedFriend = friend
+                                                if friend.amountOwed > 0 {
+                                                    // Friend owes user - show remind dialog
+                                                    showingRemindDialog = true
+                                                } else {
+                                                    // User owes friend - show settle up sheet
+                                                    showingSettleUpSheet = true
+                                                }
+                                            }) {
+                                                HStack {
+                                                    if isReminding && selectedFriend?.id == friend.id {
+                                                        ProgressView()
+                                                            .scaleEffect(0.7)
+                                                    } else {
+                                                        Text(friend.amountOwed > 0 ? "Remind" : "Settle up")
+                                                    }
+                                                }
                                                 .font(.caption)
                                                 .padding(.horizontal, 12)
                                                 .padding(.vertical, 6)
                                                 .background(friend.amountOwed > 0 ? Color.blue : Color.orange)
                                                 .foregroundColor(.white)
                                                 .cornerRadius(8)
+                                            }
+                                            .disabled(isReminding)
                                         }
+                                    }
+                                    
+                                    // Show reminder message if exists
+                                    if let message = reminderMessages[friend.id] {
+                                        HStack {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(.green)
+                                                .font(.caption)
+                                            Text(message)
+                                                .font(.caption)
+                                                .foregroundColor(.green)
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.leading, 60)
                                     }
                                 }
                                 .padding(.vertical, 4)
@@ -235,6 +261,8 @@ struct FriendView: View {
             }
             .onAppear {
                 viewModel.fetchFriends()
+                // Request notification permission
+                NotificationManager.shared.requestNotificationPermission()
             }
         }
     }
@@ -242,13 +270,25 @@ struct FriendView: View {
     func sendReminder() {
         guard let friend = selectedFriend else { return }
         
-        // In a real app, this would send a push notification or message
-        // For now, let's just print to the console
-        print("Sending reminder to \(friend.name) for $\(String(format: "%.2f", friend.amountOwed))")
+        isReminding = true
+        reminderMessages[friend.id] = nil
         
-        // You could show a confirmation alert here
-        // In a full implementation, this would integrate with Firebase Cloud Messaging
-        // to send a push notification to the user
+        NotificationManager.shared.sendReminder(to: friend, amount: friend.amountOwed) { success, error in
+            DispatchQueue.main.async {
+                self.isReminding = false
+                
+                if success {
+                    self.reminderMessages[friend.id] = "Reminder sent"
+                    // Clear the message after 3 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self.reminderMessages[friend.id] = nil
+                    }
+                } else {
+                    // Show error
+                    self.reminderMessages[friend.id] = error ?? "Failed to send reminder"
+                }
+            }
+        }
     }
 }
 
