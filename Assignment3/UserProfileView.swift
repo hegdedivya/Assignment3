@@ -24,7 +24,7 @@ struct UserProfileView: View {
                     .ignoresSafeArea()
                 VStack {
                     if let user = viewModel.user {
-                        Image(systemName: "person.crop.circle")
+                        Image("Logo")
                             .resizable()
                             .frame(width: 150, height: 150)
                             .foregroundColor(.primaryYellow)

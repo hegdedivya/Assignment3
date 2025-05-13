@@ -2,8 +2,6 @@
 //  Assignment3App.swift
 //  Assignment3
 //
-//  Created by Your Name on 2025/5/13.
-//
 
 import SwiftUI
 import Firebase
