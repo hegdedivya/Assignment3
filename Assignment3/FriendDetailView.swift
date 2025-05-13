@@ -1,5 +1,9 @@
-// FriendDetailView.swift
-// FriendDetailView.swift
+//
+//  FriendDetailView.swift
+//  Assignment3
+//
+//  Created by Minkun He on 9/5/2025.
+//
 
 import SwiftUI
 
@@ -27,6 +31,7 @@ struct FriendDetailView: View {
     @State private var showingPaymentSheet = false
     @State private var showingAddExpenseSheet = false
     @State private var showingRemindDialog = false
+    @State private var showingSettleUpSheet = false
     
     var body: some View {
         VStack {
@@ -72,8 +77,8 @@ struct FriendDetailView: View {
                                 // Friend owes user - show remind dialog
                                 showingRemindDialog = true
                             } else {
-                                // User owes friend - proceed to payment
-                                showingPaymentSheet = true
+                                // User owes friend - show settle up sheet
+                                showingSettleUpSheet = true
                             }
                         }) {
                             Text(friend.amountOwed > 0 ? "Remind" : "Settle up")
@@ -103,7 +108,7 @@ struct FriendDetailView: View {
             .cornerRadius(12)
             .padding(.horizontal)
             
-            // Shared activities list
+            // Shared activities list using your existing Activity model
             VStack(alignment: .leading) {
                 Text("Shared Activities")
                     .font(.title3)
@@ -128,7 +133,13 @@ struct FriendDetailView: View {
                                     Text("Date: \(activity.date.formatted(date: .abbreviated, time: .omitted))")
                                         .font(.subheadline)
                                     
-                                    // Add activity-related balance info here
+                                    // Show total expenses
+                                    if !activity.expenses.isEmpty {
+                                        let totalAmount = activity.expenses.reduce(0) { $0 + $1.amount }
+                                        Text("Total: $\(String(format: "%.2f", totalAmount))")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    }
                                 }
                                 .padding(.vertical, 4)
                             }
@@ -149,6 +160,14 @@ struct FriendDetailView: View {
         }
         .sheet(isPresented: $showingAddExpenseSheet) {
             AddExpenseView(group: friend.toGroup())
+        }
+        .sheet(isPresented: $showingSettleUpSheet) {
+            SettleUpView(
+                friend: friend,
+                group: nil,
+                amount: friend.amountOwed,
+                isUserOwing: friend.amountOwed < 0
+            )
         }
         .alert(isPresented: $showingRemindDialog) {
             Alert(

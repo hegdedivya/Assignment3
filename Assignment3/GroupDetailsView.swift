@@ -20,6 +20,7 @@ struct GroupDetailView: View {
     @State private var selectedMonth: Date = Date()
     @State private var selectedTab: Int = 0
     @State private var totalBalances: [String: Double] = [:]
+    @State private var showingSettleUpSheet = false
     
     @ObservedObject private var dataManager = FirebaseDataManager.shared
     
@@ -120,7 +121,7 @@ struct GroupDetailView: View {
                 Spacer()
                 
                 Button(action: {
-                    // Future feature - settle up
+                    showingSettleUpSheet = true
                 }) {
                     VStack(spacing: 8) {
                         Circle()
@@ -308,6 +309,9 @@ struct GroupDetailView: View {
         }
         .sheet(isPresented: $isAddExpensePresented) {
             AddExpenseView(group: group)
+        }
+        .sheet(isPresented: $showingSettleUpSheet) {
+            GroupSettleUpView(group: group, totalBalances: totalBalances)
         }
         .onChange(of: isAddExpensePresented) { isPresented in
             if !isPresented {
@@ -815,7 +819,7 @@ struct BalancesSummaryView: View {
                             
                             // Settle button
                             Button(action: {
-                                // Settle up action
+                                // Settle up action - handled by the parent view
                             }) {
                                 Text("Settle")
                                     .font(.caption)

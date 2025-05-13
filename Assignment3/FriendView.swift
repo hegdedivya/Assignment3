@@ -16,6 +16,7 @@ struct FriendView: View {
     @State private var showingFilter = false
     @State private var filterOption: FilterOption = .all
     @State private var showingRemindDialog = false
+    @State private var showingSettleUpSheet = false
     
     enum FilterOption: String, CaseIterable {
         case all = "All"
@@ -153,14 +154,13 @@ struct FriendView: View {
                                     
                                     if friend.amountOwed != 0 {
                                         Button(action: {
+                                            selectedFriend = friend
                                             if friend.amountOwed > 0 {
                                                 // Friend owes user - show remind dialog
-                                                selectedFriend = friend
                                                 showingRemindDialog = true
                                             } else {
-                                                // User owes friend - proceed to payment
-                                                selectedFriend = friend
-                                                navigateToPayment = true
+                                                // User owes friend - show settle up sheet
+                                                showingSettleUpSheet = true
                                             }
                                         }) {
                                             Text(friend.amountOwed > 0 ? "Remind" : "Settle up")
@@ -203,6 +203,16 @@ struct FriendView: View {
             .sheet(isPresented: $navigateToPayment) {
                 if let friend = selectedFriend {
                     PaymentView(friend: friend, amount: friend.amountOwed)
+                }
+            }
+            .sheet(isPresented: $showingSettleUpSheet) {
+                if let friend = selectedFriend {
+                    SettleUpView(
+                        friend: friend,
+                        group: nil,
+                        amount: friend.amountOwed,
+                        isUserOwing: friend.amountOwed < 0
+                    )
                 }
             }
             .actionSheet(isPresented: $showingFilter) {
