@@ -2,14 +2,31 @@
 //  SplashScreenView.swift
 //  Assignment3
 //
-//  Created by Minkun He on 13/5/2025.
+//  Created by Your Name on 2025/5/13.
 //
 
 import SwiftUI
 
 struct SplashScreenView: View {
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        ZStack {
+            // Background color - adjust as needed
+            Color(.systemBackground)
+                .ignoresSafeArea()
+            
+            VStack {
+                // Your app logo - replace with your actual logo
+                Image(systemName: "app.badge") // Replace with your logo
+                    .font(.system(size: 100))
+                    .foregroundColor(.blue)
+                
+                // App name if you want to show it
+                Text("Split Now")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .padding(.top, 20)
+            }
+        }
     }
 }
 

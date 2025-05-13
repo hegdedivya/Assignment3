@@ -2,22 +2,23 @@
 //  Assignment3App.swift
 //  Assignment3
 //
-//  Created by Divya on 23/4/2025.
+//  Created by Your Name on 2025/5/13.
 //
 
 import SwiftUI
+import Firebase
 
 @main
 struct Assignment3App: App {
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
-    let persistenceController = PersistenceController.shared
+    
+    // Initialize Firebase when the app starts
+    init() {
+        FirebaseApp.configure()
+    }
     
     var body: some Scene {
         WindowGroup {
-            NavigationView {
-               LoginView()
-                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
-            }
+            ContentView() // Set ContentView as the main entry point
         }
     }
 }
